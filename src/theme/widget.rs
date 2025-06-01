@@ -49,6 +49,50 @@ pub fn label(text: impl Into<String>) -> impl Bundle {
     )
 }
 
+pub fn item_button<E, B, M, I>(
+    image_handle: Handle<Image>,
+    layout: Handle<TextureAtlasLayout>,
+    index: usize,
+    action: I,
+) -> impl Bundle
+where
+    E: Event,
+    B: Bundle,
+    I: IntoObserverSystem<E, B, M>,
+{
+    let action = IntoObserverSystem::into_system(action);
+    (
+        Name::new("Button"),
+        Node::default(),
+        Children::spawn(SpawnWith(move |parent: &mut ChildSpawner| {
+            parent
+                .spawn((
+                    Name::new("Button Inner"),
+                    Button,
+                    BackgroundColor(BUTTON_BACKGROUND),
+                    InteractionPalette {
+                        none: BUTTON_BACKGROUND,
+                        hovered: BUTTON_HOVERED_BACKGROUND,
+                        pressed: BUTTON_PRESSED_BACKGROUND,
+                    },
+                    Node {
+                        width: Px(160.0),
+                        height: Px(160.0),
+                        align_items: AlignItems::Center,
+                        justify_content: JustifyContent::Center,
+                        ..default()
+                    },
+                    children![(
+                        Name::new("Button Image"),
+                        ImageNode::from_atlas_image(image_handle, TextureAtlas { layout, index },),
+                        Transform::from_scale(Vec2::splat(4.0).extend(1.0))
+                    )],
+                ))
+                .observe(action);
+        })),
+    )
+}
+
 /// A large rounded button with text and an action defined as an [`Observer`].
 pub fn button<E, B, M, I>(text: impl Into<String>, action: I) -> impl Bundle
 where
