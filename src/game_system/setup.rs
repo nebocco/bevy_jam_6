@@ -65,26 +65,148 @@ fn spawn_item_buttons(mut commands: Commands, item_assets: Res<ItemAssets>) {
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) enum Item {
-    Item1,
-    Item2,
-    Item3,
+    BombSmall,
+    BombMedium,
+    BombLarge,
+    BombVertical,
+    BombHorizontal,
     Eraser,
 }
 
-#[derive(Resource, Debug, Clone, Copy, Default)]
-pub(super) struct SelectedItem(pub Option<Item>);
+impl Item {
+    pub fn impact_zone(&self) -> &'static [(i8, i8)] {
+        match self {
+            // . . . . .
+            // . x x x .
+            // . x # x .
+            // . x x x.
+            // . . . . .
+            Item::BombSmall => &[
+                (-1, 1),
+                (0, 1),
+                (1, 1),
+                (-1, 0),
+                (0, 0),
+                (1, 0),
+                (-1, -1),
+                (0, -1),
+                (1, -1),
+            ],
+
+            // . . x . .
+            // . x x x .
+            // x x # x x
+            // . x x x .
+            // . . x . .
+            Item::BombMedium => &[
+                (0, 2),
+                (-1, 1),
+                (0, 1),
+                (1, 1),
+                (-2, 0),
+                (-1, 0),
+                (0, 0),
+                (1, 0),
+                (2, 0),
+                (-1, -1),
+                (0, -1),
+                (1, -1),
+                (0, -2),
+            ],
+
+            // . . . x . . .
+            // . . x x x . .
+            // . x x x x x .
+            // x x x # x x x
+            // . x x x x x .
+            // . . x x x . .
+            // . . . x . . .
+            Item::BombLarge => &[
+                (0, 3),
+                (-1, 2),
+                (0, 2),
+                (1, 2),
+                (-2, 1),
+                (-1, 1),
+                (0, 1),
+                (1, 1),
+                (2, 1),
+                (-3, 0),
+                (-2, 0),
+                (-1, 0),
+                (0, 0),
+                (1, 0),
+                (2, 0),
+                (3, 0),
+                (-2, -1),
+                (-1, -1),
+                (0, -1),
+                (1, -1),
+                (2, -1),
+                (-1, -2),
+                (0, -2),
+                (1, -2),
+                (0, -3),
+            ],
+
+            // . . x . .
+            // . . x . .
+            // . . # . .
+            // . . x . .
+            // . . x . .
+            Item::BombVertical => &[
+                (0, 5),
+                (0, 4),
+                (0, 3),
+                (0, 2),
+                (0, 1),
+                (0, 0),
+                (0, -1),
+                (0, -2),
+                (0, -3),
+                (0, -4),
+                (0, -5),
+            ],
+
+            // . . . . .
+            // . . . . .
+            // x x # x x
+            // . . . . .
+            // . . . . .
+            Item::BombHorizontal => &[
+                (5, 0),
+                (4, 0),
+                (3, 0),
+                (2, 0),
+                (1, 0),
+                (0, 0),
+                (-1, 0),
+                (-2, 0),
+                (-3, 0),
+                (-4, 0),
+                (-5, 0),
+            ],
+
+            // Eraser does not have an impact zone.
+            Item::Eraser => &[],
+        }
+    }
+}
 
 impl From<u8> for Item {
     fn from(value: u8) -> Self {
         match value {
-            0 => Item::Item1,
-            1 => Item::Item2,
-            2 => Item::Item3,
+            0 => Item::BombSmall,
+            1 => Item::BombMedium,
+            2 => Item::BombLarge,
             255 => Item::Eraser,
             _ => panic!("Invalid item index"),
         }
     }
 }
+
+#[derive(Resource, Debug, Clone, Copy, Default)]
+pub(super) struct SelectedItem(pub Option<Item>);
 
 fn select_item<const I: u8>(_: Trigger<Pointer<Click>>, mut selected_item: ResMut<SelectedItem>) {
     let item = Item::from(I);
