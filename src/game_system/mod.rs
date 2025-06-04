@@ -6,7 +6,8 @@
 use bevy::prelude::*;
 
 mod item;
+mod level;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins((item::plugin,));
+    app.add_plugins((item::plugin, level::plugin));
 }
