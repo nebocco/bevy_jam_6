@@ -5,9 +5,22 @@
 
 use bevy::prelude::*;
 
-mod item;
+use crate::screens::Screen;
+
 mod level;
+mod run;
+mod setup;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins((item::plugin, level::plugin));
+    app.add_sub_state::<GamePhase>()
+        .add_plugins((setup::plugin, level::plugin, run::plugin));
+}
+
+#[derive(SubStates, Clone, PartialEq, Eq, Hash, Debug, Default)]
+#[source(Screen = Screen::Gameplay)]
+enum GamePhase {
+    #[default]
+    Setup,
+    Run,
+    Result,
 }

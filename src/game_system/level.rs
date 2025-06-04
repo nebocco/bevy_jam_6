@@ -9,12 +9,7 @@ use bevy::{
     prelude::*,
 };
 
-use crate::{
-    asset_tracking::LoadResource,
-    audio::music,
-    game_system::item::{self, Item},
-    screens::Screen,
-};
+use crate::{asset_tracking::LoadResource, audio::music, game_system::setup, screens::Screen};
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<LevelAssets>()
@@ -47,7 +42,7 @@ impl FromWorld for LevelAssets {
 }
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct GridCoord {
+pub struct GridCoord {
     pub x: u8,
     pub y: u8,
 }
@@ -56,12 +51,12 @@ struct GridCoord {
 struct CreateObject {
     parent_grid: Entity,
     pub coord: GridCoord,
-    item: item::Item,
+    item: setup::Item,
 }
 
 #[derive(Resource, Debug, Clone, Default)]
-struct ObjectMap {
-    objects: std::collections::HashMap<GridCoord, (item::Item, Entity)>,
+pub struct ObjectMap {
+    pub objects: std::collections::HashMap<GridCoord, (setup::Item, Entity)>,
 }
 
 /// A system that spawns the main level.
@@ -104,8 +99,8 @@ pub fn spawn_grid(
             StateScoped(Screen::Gameplay),
         ))
         .with_children(move |parent| {
-            for x in 0..10 {
-                for y in 0..10 {
+            (0..10).for_each(|x| {
+                (0..10).for_each(|y| {
                     let color_handle = Handle::clone(&color_handle);
                     let hovered_color_handle = Handle::clone(&hovered_color_handle);
                     parent
@@ -116,41 +111,48 @@ pub fn spawn_grid(
                             Pickable::default(),
                             Mesh2d(Handle::clone(&rect_handle)),
                             MeshMaterial2d(Handle::clone(&color_handle)),
-                        ))
-                        .observe(
-                            move |over: Trigger<Pointer<Over>>,
-                                mut color: Query<&mut MeshMaterial2d<ColorMaterial>>,|{
+                        )).observe(
+                            move |over: Trigger<Pointer<Over>>, mut color: Query<&mut MeshMaterial2d<ColorMaterial>>| {
                                 let mut color = color.get_mut(over.target()).unwrap();
                                 color.0 = Handle::clone(&hovered_color_handle);
-                            },
+                            }
                         ).observe(
-                            move |out: Trigger<Pointer<Out>>,
-                                mut color: Query<&mut MeshMaterial2d<ColorMaterial>>,|{
+                            move |out: Trigger<Pointer<Out>>, mut color: Query<&mut MeshMaterial2d<ColorMaterial>>| {
                                 let mut color = color.get_mut(out.target()).unwrap();
                                 color.0 = Handle::clone(&color_handle);
-                            },
-                        ).observe(
-                            |out: Trigger<Pointer<Pressed>>,
-                                coord: Query<&GridCoord>,
-                                selected_item: Res<item::SelectedItem>,
-                                mut commands: Commands| {
-                                let entity = out.target();
-                                let &coord = coord.get(entity).unwrap();
-                                println!("Creating object at coord: {:?}", coord);
-                                let Some(item) = selected_item.0 else {
-                                    return;
-                                };
-                                println!("Creating object with item: {:?}", item);
-                                commands.trigger(CreateObject {
-                                    parent_grid: entity,
-                                    coord,
-                                    item,
-                                });
                             }
+                        ).observe(
+                            trigger_primary_click_on_grid
                         );
-                }
-            }
+                });
+            });
         });
+}
+
+fn grid_cell() -> impl Bundle {
+    ()
+}
+
+fn trigger_primary_click_on_grid(
+    out: Trigger<Pointer<Pressed>>,
+    coord: Query<&GridCoord>,
+    selected_item: Res<setup::SelectedItem>,
+    mut commands: Commands,
+) {
+    if out.event().button == PointerButton::Primary {
+        let entity = out.target();
+        let &coord = coord.get(entity).unwrap();
+        println!("Creating object at coord: {:?}", coord);
+        let Some(item) = selected_item.0 else {
+            return;
+        };
+        println!("Creating object with item: {:?}", item);
+        commands.trigger(CreateObject {
+            parent_grid: entity,
+            coord,
+            item,
+        });
+    }
 }
 
 // An observer listener that changes the target entity's color.
@@ -179,7 +181,7 @@ fn reset_all_object_placements(
 fn create_object(
     trigger: Trigger<CreateObject>,
     mut commands: Commands,
-    item_assets: Res<item::ItemAssets>,
+    item_assets: Res<setup::ItemAssets>,
     mut object_map: ResMut<ObjectMap>,
 ) {
     let event = trigger.event();
@@ -190,12 +192,12 @@ fn create_object(
         commands.entity(existing_entity).despawn();
     }
 
-    if event.item != item::Item::Eraser {
+    if event.item != setup::Item::Eraser {
         let entity = commands
             .spawn((
                 Name::new("Item Object"),
                 GridCoord::clone(&event.coord),
-                Item::clone(&event.item),
+                setup::Item::clone(&event.item),
                 Sprite::from_atlas_image(
                     item_assets.sprite_sheet.clone(),
                     TextureAtlas {
