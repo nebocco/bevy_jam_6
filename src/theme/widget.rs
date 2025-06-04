@@ -76,8 +76,8 @@ where
                         pressed: BUTTON_PRESSED_BACKGROUND,
                     },
                     Node {
-                        width: Px(160.0),
-                        height: Px(160.0),
+                        width: Px(80.0),
+                        height: Px(80.0),
                         align_items: AlignItems::Center,
                         justify_content: JustifyContent::Center,
                         ..default()
@@ -85,7 +85,7 @@ where
                     children![(
                         Name::new("Button Image"),
                         ImageNode::from_atlas_image(image_handle, TextureAtlas { layout, index },),
-                        Transform::from_scale(Vec2::splat(4.0).extend(1.0))
+                        Transform::from_scale(Vec2::splat(2.0).extend(1.0))
                     )],
                 ))
                 .observe(action);

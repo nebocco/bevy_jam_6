@@ -25,31 +25,43 @@ fn spawn_item_buttons(
     let layout = TextureAtlasLayout::from_grid(UVec2::splat(32), 4, 8, Some(UVec2::splat(1)), None);
     let texture_atlas_layout = texture_atlas_layouts.add(layout);
 
-    commands.spawn((
-        widget::ui_root("Main Menu"),
-        GlobalZIndex(2),
-        StateScoped(Menu::None),
-        children![
-            widget::item_button(
-                Handle::clone(&item_assets.sprite_sheet),
-                Handle::clone(&texture_atlas_layout),
-                0,
-                select_item::<0>
-            ),
-            widget::item_button(
-                Handle::clone(&item_assets.sprite_sheet),
-                Handle::clone(&texture_atlas_layout),
-                1,
-                select_item::<1>
-            ),
-            widget::item_button(
-                Handle::clone(&item_assets.sprite_sheet),
-                Handle::clone(&texture_atlas_layout),
-                2,
-                select_item::<2>
-            ),
-        ],
-    ));
+    commands
+        .spawn((
+            widget::ui_root("Item Buttons"),
+            GlobalZIndex(2),
+            StateScoped(Menu::None),
+            children![
+                widget::item_button(
+                    Handle::clone(&item_assets.sprite_sheet),
+                    Handle::clone(&texture_atlas_layout),
+                    0,
+                    select_item::<0>
+                ),
+                widget::item_button(
+                    Handle::clone(&item_assets.sprite_sheet),
+                    Handle::clone(&texture_atlas_layout),
+                    1,
+                    select_item::<1>
+                ),
+                widget::item_button(
+                    Handle::clone(&item_assets.sprite_sheet),
+                    Handle::clone(&texture_atlas_layout),
+                    2,
+                    select_item::<2>
+                ),
+            ],
+            BackgroundColor(Color::WHITE),
+        ))
+        .insert(Node {
+            position_type: PositionType::Absolute,
+            align_items: AlignItems::FlexEnd,
+            justify_content: JustifyContent::Center,
+            height: Val::Percent(100.0),
+            flex_direction: FlexDirection::Column,
+            row_gap: Val::Px(32.0),
+            left: Val::Percent(60.0),
+            ..Default::default()
+        });
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -75,8 +87,13 @@ impl From<u8> for Item {
 
 fn select_item<const I: u8>(_: Trigger<Pointer<Click>>, mut selected_item: ResMut<SelectedItem>) {
     let item = Item::from(I);
-    selected_item.0 = Some(item);
-    println!("Selected item: {:?}", item);
+    selected_item.0 = if selected_item.0 == Some(item) {
+        println!("Deselecting item: {:?}", item);
+        None
+    } else {
+        println!("Selected item: {:?}", item);
+        Some(item)
+    }
 }
 
 #[derive(Resource, Asset, Clone, Reflect)]
