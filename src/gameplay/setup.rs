@@ -2,6 +2,7 @@ use bevy::{
     image::{ImageLoaderSettings, ImageSampler},
     prelude::*,
 };
+use serde::{Deserialize, Serialize};
 
 use crate::{
     AppSystems, PausableSystems, asset_tracking::LoadResource, menus::Menu, screens::Screen,
@@ -12,7 +13,8 @@ pub(super) fn plugin(app: &mut App) {
     // app.register_type::<Item>();
 
     // app.register_type::<ItemAssets>();
-    app.load_resource::<ItemAssets>();
+    app.load_resource::<ItemAssets>()
+        .load_resource::<BgAssets>();
     app.init_resource::<SelectedItem>();
     app.add_systems(OnEnter(Screen::Gameplay), spawn_item_buttons);
 }
@@ -22,7 +24,7 @@ fn spawn_item_buttons(mut commands: Commands, item_assets: Res<ItemAssets>) {
         .spawn((
             widget::ui_root("Item Buttons"),
             GlobalZIndex(2),
-            StateScoped(Menu::None),
+            StateScoped(Screen::Gameplay),
             children![
                 widget::item_button(
                     Handle::clone(&item_assets.sprite_sheet),
@@ -57,19 +59,21 @@ fn spawn_item_buttons(mut commands: Commands, item_assets: Res<ItemAssets>) {
             justify_content: JustifyContent::Center,
             height: Val::Percent(100.0),
             flex_direction: FlexDirection::Column,
-            row_gap: Val::Px(32.0),
+            row_gap: Val::Px(16.0),
             left: Val::Percent(60.0),
             ..Default::default()
         });
 }
 
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize, Reflect)]
 pub(super) enum Item {
     BombSmall,
     BombMedium,
     BombLarge,
     BombVertical,
     BombHorizontal,
+    Rock,
+    Gem,
     Eraser,
     Fire,
 }
@@ -191,7 +195,7 @@ impl Item {
             Item::Fire => &[(0, 0)],
 
             // Eraser does not have an impact zone.
-            Item::Eraser => &[],
+            Item::Rock | Item::Gem | Item::Eraser => &[],
         }
     }
 }
@@ -240,7 +244,7 @@ impl FromWorld for ItemAssets {
                 UVec2::splat(32),
                 4,
                 8,
-                Some(UVec2::splat(1)),
+                None,
                 None,
             ))
         };
@@ -248,6 +252,48 @@ impl FromWorld for ItemAssets {
         Self {
             sprite_sheet: assets.load_with_settings(
                 "images/item_sprite_sheet.png",
+                |settings: &mut ImageLoaderSettings| {
+                    // Use `nearest` image sampling to preserve pixel art style.
+                    settings.sampler = ImageSampler::nearest();
+                },
+            ),
+            // steps: vec![
+            //     assets.load("audio/sound_effects/step1.ogg"),
+            //     assets.load("audio/sound_effects/step2.ogg"),
+            //     assets.load("audio/sound_effects/step3.ogg"),
+            //     assets.load("audio/sound_effects/step4.ogg"),
+            // ],
+            texture_atlas_layout,
+        }
+    }
+}
+
+#[derive(Resource, Asset, Clone, Reflect)]
+#[reflect(Resource)]
+pub struct BgAssets {
+    #[dependency]
+    pub sprite_sheet: Handle<Image>,
+    // #[dependency]
+    // pub steps: Vec<Handle<AudioSource>>,
+    pub texture_atlas_layout: Handle<TextureAtlasLayout>,
+}
+
+impl FromWorld for BgAssets {
+    fn from_world(world: &mut World) -> Self {
+        let texture_atlas_layout = {
+            let mut texture_atlas = world.resource_mut::<Assets<TextureAtlasLayout>>();
+            texture_atlas.add(TextureAtlasLayout::from_grid(
+                UVec2::splat(64),
+                4,
+                4,
+                None,
+                None,
+            ))
+        };
+        let assets = world.resource::<AssetServer>();
+        Self {
+            sprite_sheet: assets.load_with_settings(
+                "images/bg_sprite_sheet.png",
                 |settings: &mut ImageLoaderSettings| {
                     // Use `nearest` image sampling to preserve pixel art style.
                     settings.sampler = ImageSampler::nearest();

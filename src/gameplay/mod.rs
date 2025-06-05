@@ -12,6 +12,8 @@ mod result;
 mod run;
 mod setup;
 
+pub use level::CurrentLevel;
+
 pub(super) fn plugin(app: &mut App) {
     app.add_sub_state::<GamePhase>().add_plugins((
         setup::plugin,
@@ -23,6 +25,7 @@ pub(super) fn plugin(app: &mut App) {
 
 #[derive(SubStates, Clone, PartialEq, Eq, Hash, Debug, Default)]
 #[source(Screen = Screen::Gameplay)]
+#[states(scoped_entities)]
 enum GamePhase {
     #[default]
     Setup,
