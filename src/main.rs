@@ -8,7 +8,7 @@ mod audio;
 mod demo;
 #[cfg(feature = "dev")]
 mod dev_tools;
-mod game_system;
+mod gameplay;
 mod menus;
 mod screens;
 mod theme;
@@ -50,7 +50,7 @@ impl Plugin for AppPlugin {
             audio::plugin,
             #[cfg(feature = "dev")]
             dev_tools::plugin,
-            game_system::plugin,
+            gameplay::plugin,
             menus::plugin,
             screens::plugin,
             theme::plugin,

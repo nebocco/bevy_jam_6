@@ -8,12 +8,17 @@ use bevy::prelude::*;
 use crate::screens::Screen;
 
 mod level;
+mod result;
 mod run;
 mod setup;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_sub_state::<GamePhase>()
-        .add_plugins((setup::plugin, level::plugin, run::plugin));
+    app.add_sub_state::<GamePhase>().add_plugins((
+        setup::plugin,
+        level::plugin,
+        run::plugin,
+        result::plugin,
+    ));
 }
 
 #[derive(SubStates, Clone, PartialEq, Eq, Hash, Debug, Default)]

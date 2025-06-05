@@ -9,21 +9,30 @@ use bevy::{
     prelude::*,
 };
 
-use crate::{asset_tracking::LoadResource, audio::music, game_system::setup, screens::Screen};
+use crate::{
+    asset_tracking::LoadResource,
+    audio::music,
+    gameplay::{GamePhase, setup},
+    screens::Screen,
+};
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<LevelAssets>()
         .load_resource::<LevelAssets>()
-        .init_resource::<ObjectMap>();
+        .init_resource::<ObjectMap>()
+        .init_resource::<CurrentLevel>();
     app.add_plugins(MeshPickingPlugin)
         .add_event::<CreateObject>();
     app.add_systems(OnEnter(Screen::Gameplay), spawn_level)
         .add_observer(create_object)
         .add_systems(
             Update,
-            (reset_all_object_placements,).run_if(in_state(Screen::Gameplay)),
+            (reset_all_object_placements, run_simulation).run_if(in_state(Screen::Gameplay)),
         );
 }
+
+#[derive(Resource, Debug, Clone, Copy, Default)]
+pub struct CurrentLevel(pub usize);
 
 #[derive(Resource, Asset, Clone, Reflect)]
 #[reflect(Resource)]
@@ -57,6 +66,7 @@ struct CreateObject {
 #[derive(Resource, Debug, Clone, Default)]
 pub struct ObjectMap {
     pub objects: std::collections::HashMap<GridCoord, (setup::Item, Entity)>,
+    pub fire: Option<(GridCoord, Entity)>,
 }
 
 /// A system that spawns the main level.
@@ -103,56 +113,79 @@ pub fn spawn_grid(
                 (0..10).for_each(|y| {
                     let color_handle = Handle::clone(&color_handle);
                     let hovered_color_handle = Handle::clone(&hovered_color_handle);
-                    parent
-                        .spawn((
-                            Name::new(format!("Tile ({}, {})", x, y)),
-                            GridCoord { x, y },
-                            Transform::from_xyz(x as f32 * 32.0 - 144.0, y as f32 * 32.0 - 144.0, 0.0),
-                            Pickable::default(),
-                            Mesh2d(Handle::clone(&rect_handle)),
-                            MeshMaterial2d(Handle::clone(&color_handle)),
-                        )).observe(
-                            move |over: Trigger<Pointer<Over>>, mut color: Query<&mut MeshMaterial2d<ColorMaterial>>| {
-                                let mut color = color.get_mut(over.target()).unwrap();
-                                color.0 = Handle::clone(&hovered_color_handle);
-                            }
-                        ).observe(
-                            move |out: Trigger<Pointer<Out>>, mut color: Query<&mut MeshMaterial2d<ColorMaterial>>| {
-                                let mut color = color.get_mut(out.target()).unwrap();
-                                color.0 = Handle::clone(&color_handle);
-                            }
-                        ).observe(
-                            trigger_primary_click_on_grid
-                        );
+                    spawn_grid_cell(
+                        parent,
+                        x,
+                        y,
+                        rect_handle.clone(),
+                        color_handle.clone(),
+                        hovered_color_handle.clone(),
+                    );
                 });
             });
         });
 }
 
-fn grid_cell() -> impl Bundle {
-    ()
-}
-
-fn trigger_primary_click_on_grid(
-    out: Trigger<Pointer<Pressed>>,
-    coord: Query<&GridCoord>,
-    selected_item: Res<setup::SelectedItem>,
-    mut commands: Commands,
+fn spawn_grid_cell(
+    builder: &mut RelatedSpawnerCommands<'_, ChildOf>,
+    x: u8,
+    y: u8,
+    rect_handle: Handle<Mesh>,
+    color_handle: Handle<ColorMaterial>,
+    hovered_color_handle: Handle<ColorMaterial>,
 ) {
-    if out.event().button == PointerButton::Primary {
-        let entity = out.target();
-        let &coord = coord.get(entity).unwrap();
-        println!("Creating object at coord: {:?}", coord);
-        let Some(item) = selected_item.0 else {
-            return;
-        };
-        println!("Creating object with item: {:?}", item);
-        commands.trigger(CreateObject {
-            parent_grid: entity,
-            coord,
-            item,
-        });
-    }
+    builder
+        .spawn((
+            Name::new(format!("Tile ({}, {})", x, y)),
+            GridCoord { x, y },
+            Transform::from_xyz(x as f32 * 32.0 - 144.0, y as f32 * 32.0 - 144.0, 0.0),
+            Pickable::default(),
+            Mesh2d(rect_handle),
+            MeshMaterial2d(Handle::clone(&color_handle)),
+        ))
+        .observe(
+            move |over: Trigger<Pointer<Over>>,
+                  mut color: Query<&mut MeshMaterial2d<ColorMaterial>>| {
+                let mut color = color.get_mut(over.target()).unwrap();
+                color.0 = Handle::clone(&hovered_color_handle);
+            },
+        )
+        .observe(
+            move |out: Trigger<Pointer<Out>>,
+                  mut color: Query<&mut MeshMaterial2d<ColorMaterial>>| {
+                let mut color = color.get_mut(out.target()).unwrap();
+                color.0 = Handle::clone(&color_handle);
+            },
+        )
+        .observe(
+            |out: Trigger<Pointer<Pressed>>,
+             coord: Query<&GridCoord>,
+             selected_item: Res<setup::SelectedItem>,
+             mut commands: Commands| {
+                let entity = out.target();
+                let &coord = coord.get(entity).unwrap();
+                println!("Creating object at coord: {:?}", coord);
+                let item = match out.button {
+                    PointerButton::Primary => {
+                        let Some(item) = selected_item.0 else {
+                            println!("No item selected, skipping object creation.");
+                            return;
+                        };
+                        item
+                    }
+                    PointerButton::Secondary | _ => {
+                        println!("Using eraser, removing object at coord: {:?}", coord);
+                        setup::Item::Fire
+                    }
+                };
+                println!("Creating object with item: {:?}", item);
+                commands.trigger(CreateObject {
+                    parent_grid: entity,
+                    coord,
+                    item,
+                });
+            },
+        );
 }
 
 // An observer listener that changes the target entity's color.
@@ -177,6 +210,23 @@ fn reset_all_object_placements(
     }
 }
 
+fn run_simulation(
+    button_input: Res<ButtonInput<KeyCode>>,
+    mut next_state: ResMut<NextState<GamePhase>>,
+) {
+    if button_input.just_pressed(KeyCode::Space) {
+        println!("Running simulation...");
+        next_state.set(GamePhase::Run);
+    }
+}
+
+#[derive(Component, Debug, Clone, Copy, PartialEq, Default)]
+pub enum ItemState {
+    #[default]
+    None,
+    Burned,
+}
+
 // create item on grid click
 fn create_object(
     trigger: Trigger<CreateObject>,
@@ -188,6 +238,29 @@ fn create_object(
     println!("Creating object at coord: {:?}", event.coord);
     println!("{:?}", &object_map.objects);
 
+    if event.item == setup::Item::Fire {
+        if let Some((fire_coord, fire_entity)) = object_map.fire.take() {
+            commands.entity(fire_entity).despawn();
+            if fire_coord == event.coord {
+                println!("Fire already exists at this coordinate, skipping creation.");
+                return;
+            }
+        }
+        let entity = commands
+            .spawn((
+                Name::new("Fire Object"),
+                GridCoord::clone(&event.coord),
+                setup::Item::Fire,
+                Sprite::from_color(palettes::basic::RED, Vec2::splat(8.0)),
+                Transform::from_xyz(8.0, 8.0, 3.0),
+                StateScoped(Screen::Gameplay),
+            ))
+            .id();
+        commands.entity(event.parent_grid).add_child(entity);
+        object_map.fire = Some((event.coord, entity));
+        return;
+    }
+
     if let Some((_, existing_entity)) = object_map.objects.remove(&event.coord) {
         commands.entity(existing_entity).despawn();
     }
@@ -198,6 +271,7 @@ fn create_object(
                 Name::new("Item Object"),
                 GridCoord::clone(&event.coord),
                 setup::Item::clone(&event.item),
+                ItemState::None,
                 Sprite::from_atlas_image(
                     item_assets.sprite_sheet.clone(),
                     TextureAtlas {

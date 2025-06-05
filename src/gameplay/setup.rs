@@ -71,6 +71,7 @@ pub(super) enum Item {
     BombVertical,
     BombHorizontal,
     Eraser,
+    Fire,
 }
 
 impl Item {
@@ -186,6 +187,8 @@ impl Item {
                 (-4, 0),
                 (-5, 0),
             ],
+
+            Item::Fire => &[(0, 0)],
 
             // Eraser does not have an impact zone.
             Item::Eraser => &[],
