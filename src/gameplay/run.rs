@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::Debug};
 
-use bevy::{color::palettes, prelude::*};
+use bevy::prelude::*;
 
 use crate::gameplay::{GamePhase, GridCoord, Item, ItemState, ObjectMap};
 
@@ -27,6 +27,12 @@ pub struct BurningStack(Vec<(GridCoord, Item, Entity)>);
 
 #[derive(Event, Debug, Clone, Copy, PartialEq)]
 struct NextTick;
+
+#[derive(Event, Debug, Clone, Copy, PartialEq)]
+pub struct Explode {
+    pub parent_entity: Entity,
+    pub item: Item,
+}
 
 fn init_run_state(
     mut timer: ResMut<RunningTimer>,
@@ -67,39 +73,66 @@ fn tick_timer(
 
 fn tick_simulation(
     _trigger: Trigger<NextTick>,
-    // mut commands: Commands,
-    mut color: Query<(&mut Sprite, &mut ItemState)>,
+    mut commands: Commands,
     mut running_state: ResMut<RunningState>,
     mut burning_stack: ResMut<BurningStack>,
+    mut query: Query<&mut ItemState>,
 ) {
     running_state.tick += 1;
     println!("Tick: {}", running_state.tick);
-    for (coord, item, entity) in std::mem::take(&mut burning_stack.0) {
-        if running_state.object_map.remove(&coord).is_none() {
-            continue;
-        }
-        println!("Burning item: {:?} at {:?}", item, coord);
-        // commands.entity(entity).insert(());
+    println!("Burning stack: {:?}", &burning_stack);
+    let mut filtered_burning_stack: Vec<_> = std::mem::take(&mut burning_stack.0)
+        .into_iter()
+        .filter(|(coord, _item, _entity)| running_state.object_map.remove(&coord).is_some())
+        .collect();
+    filtered_burning_stack.sort_by_key(|(_, _, entity)| *entity);
+    filtered_burning_stack.dedup_by_key(|(_, _, entity)| *entity);
 
-        if let Ok((mut sprite, mut item_state)) = color.get_mut(entity) {
-            sprite.color = Color::Srgba(palettes::basic::RED);
+    // explode animation
+    filtered_burning_stack
+        .iter()
+        .for_each(|&(coord, item, entity)| {
+            let mut item_state = query.get_mut(entity).expect("Entity not found in query");
             *item_state = ItemState::Burned;
-        } else {
-            println!("Failed to get sprite for entity: {:?}", entity);
-        }
+            commands.trigger(Explode {
+                item,
+                parent_entity: entity,
+            });
+        });
 
-        for &(dx, dy) in item.impact_zone() {
-            let new_coord = GridCoord {
-                x: coord.x.wrapping_add(dx as u8),
-                y: coord.y.wrapping_add(dy as u8),
-            };
+    let affected_area = compute_affected_area(&filtered_burning_stack);
 
-            if let Some((target_item, target_entity)) = running_state.object_map.get(&new_coord) {
-                burning_stack
-                    .0
-                    .push((new_coord, *target_item, *target_entity));
-            }
-        }
-    }
-    println!("{:?}", &burning_stack);
+    let affected_items: Vec<_> = affected_area
+        .iter()
+        .filter_map(|&(coord, _count)| {
+            running_state
+                .object_map
+                .get(&coord)
+                .map(|&(item, entity)| (coord, item, entity))
+        })
+        .collect();
+    burning_stack.0 = affected_items;
+
+    println!("next stack: {:?}", &burning_stack);
+}
+
+fn compute_affected_area(burning_stack: &[(GridCoord, Item, Entity)]) -> Vec<(GridCoord, usize)> {
+    burning_stack
+        .iter()
+        .filter(|(_, item, _)| item.is_bomb())
+        .flat_map(|(coord, item, _)| {
+            item.impact_zone().iter().map(move |&(dx, dy)| {
+                let new_coord = GridCoord {
+                    x: coord.x.wrapping_add(dx as u8),
+                    y: coord.y.wrapping_add(dy as u8),
+                };
+                (new_coord, 1) // Count each affected area once
+            })
+        })
+        .fold(HashMap::new(), |mut acc, (coord, count)| {
+            *acc.entry(coord).or_insert(0) += count;
+            acc
+        })
+        .into_iter()
+        .collect::<Vec<_>>()
 }

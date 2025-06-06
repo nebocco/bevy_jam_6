@@ -104,13 +104,16 @@ impl FromWorld for BgAssets {
     }
 }
 
-#[derive(Resource, Debug, Clone, Copy, Default)]
-pub struct CurrentLevel(pub usize);
+#[derive(Resource, Debug, Clone, Default)]
+pub struct CurrentLevel {
+    pub level: usize,
+    pub layout: Handle<LevelLayout>,
+}
 
 #[derive(Asset, Debug, Clone, Reflect, Serialize, Deserialize)]
-struct LevelLayout {
-    board_size: (u8, u8),
-    objects: HashMap<GridCoord, Item>,
+pub struct LevelLayout {
+    pub board_size: (u8, u8),
+    pub objects: HashMap<GridCoord, Item>,
 }
 
 #[derive(Default)]
@@ -151,7 +154,7 @@ pub struct GridTileTint;
 #[derive(Resource, Asset, Debug, Clone, Reflect)]
 #[reflect(Resource)]
 pub struct LevelAssets {
-    levels: Vec<Handle<LevelLayout>>,
+    pub levels: Vec<Handle<LevelLayout>>,
     #[dependency]
     music: Handle<AudioSource>,
 }
@@ -187,6 +190,7 @@ pub enum Item {
     Gem,
     Eraser,
     Fire,
+    Enemy,
 }
 
 impl Item {
@@ -212,6 +216,7 @@ impl Item {
             Item::Eraser => 6,
             Item::Rock => 8,
             Item::Gem => 10,
+            Item::Enemy => 11,
         }
     }
 }
@@ -333,7 +338,7 @@ impl Item {
             Item::Fire => &[(0, 0)],
 
             // Eraser does not have an impact zone.
-            Item::Rock | Item::Gem | Item::Eraser => &[],
+            Item::Rock | Item::Gem | Item::Eraser | Item::Enemy => &[],
         }
     }
 }
@@ -348,12 +353,6 @@ impl From<u8> for Item {
             _ => panic!("Invalid item index"),
         }
     }
-}
-
-#[derive(Resource, Debug, Clone, Default)]
-pub struct ObjectMap {
-    pub objects: std::collections::HashMap<GridCoord, (Item, Entity)>,
-    pub fire: Option<(GridCoord, Entity)>,
 }
 
 fn despawn_old_level(mut commands: Commands, query: Query<Entity, With<LevelBase>>) {
@@ -372,13 +371,8 @@ fn spawn_level(
     level_layouts: Res<Assets<LevelLayout>>,
     object_map: ResMut<ObjectMap>,
 ) {
-    let current_level = current_level.0;
-    let level_layout_handle = level_assets
-        .levels
-        .get(current_level)
-        .expect("Current level handle not found");
     let level_layout = level_layouts
-        .get(level_layout_handle)
+        .get(&current_level.layout)
         .expect("Level layout not found");
 
     commands
@@ -627,6 +621,6 @@ fn move_to_edit_phase(
     mut next_state: ResMut<NextState<GamePhase>>,
     current_level: Res<CurrentLevel>,
 ) {
-    println!("Moving to Edit phase for level {}", current_level.0);
+    println!("Moving to Edit phase for level {}", current_level.level);
     next_state.set(GamePhase::Edit);
 }

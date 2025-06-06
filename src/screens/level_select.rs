@@ -2,15 +2,15 @@ use std::fmt::Debug;
 
 use bevy::prelude::*;
 
-use crate::{gameplay::CurrentLevel, screens::Screen, theme::widget};
+use crate::{
+    gameplay::{ClearedLevels, CurrentLevel, LevelAssets, move_to_level},
+    screens::Screen,
+    theme::widget,
+};
 
 pub(super) fn plugin(app: &mut App) {
-    app.init_resource::<ClearedLevels>()
-        .add_systems(OnEnter(Screen::LevelSelect), spawn_level_select_screen);
+    app.add_systems(OnEnter(Screen::LevelSelect), spawn_level_select_screen);
 }
-
-#[derive(Resource, Debug, Clone, PartialEq, Default)]
-struct ClearedLevels(Vec<usize>);
 
 fn spawn_level_select_screen(mut commands: Commands) {
     commands.spawn((
@@ -46,12 +46,10 @@ fn stage_select_button_grid() -> impl Bundle {
 
 fn select_level<const L: usize>(
     _out: Trigger<Pointer<Click>>,
-    mut current_level: ResMut<CurrentLevel>,
-    mut next_state: ResMut<NextState<Screen>>,
+    level_assets: Res<LevelAssets>,
+    current_level: ResMut<CurrentLevel>,
+    next_screen: ResMut<NextState<Screen>>,
 ) {
-    // Here you would typically load the level data and transition to the gameplay screen.
-    // For now, we just log the selected level.
-    info!("Selected Level: {}", L);
-    current_level.0 = L; // Set the current level to the selected one
-    next_state.set(Screen::Gameplay); // Transition to gameplay screen
+    info!("Selecting Level: {}", L);
+    move_to_level(L, level_assets, current_level, next_screen);
 }

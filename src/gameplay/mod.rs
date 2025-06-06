@@ -7,20 +7,23 @@ use bevy::prelude::*;
 
 use crate::screens::Screen;
 
+mod animation;
 mod edit;
 mod init_level;
 mod result;
 mod run;
 
-pub use init_level::CurrentLevel;
+pub use init_level::{CurrentLevel, LevelAssets};
 use init_level::{GridCoord, Item, ItemAssets, ItemState, ObjectMap};
+pub use result::{ClearedLevels, move_to_level};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_sub_state::<GamePhase>().add_plugins((
+        animation::plugin,
         edit::plugin,
         init_level::plugin,
-        run::plugin,
         result::plugin,
+        run::plugin,
     ));
 }
 

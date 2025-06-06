@@ -2,6 +2,7 @@
     board_size: (4, 5),
     objects: {
         (x:0, y:1): BombSmall,
-        (x:1, y:4): BombMedium
+        (x:1, y:4): Rock,
+        (x:2, y:0): Gem,
     }
 )
