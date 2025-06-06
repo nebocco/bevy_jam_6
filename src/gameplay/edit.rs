@@ -17,10 +17,11 @@ pub(super) fn plugin(app: &mut App) {
         .add_plugins(MeshPickingPlugin)
         .add_event::<CreateObject>()
         .add_observer(create_object)
+        .add_systems(OnEnter(GamePhase::Edit), init_edit_state)
         .add_systems(
             Update,
             (reset_all_object_placements, run_simulation)
-                .run_if(in_state(GamePhase::Setup))
+                .run_if(in_state(GamePhase::Edit))
                 .in_set(PausableSystems),
         );
 }
@@ -29,7 +30,7 @@ fn spawn_item_buttons(mut commands: Commands, item_assets: Res<ItemAssets>) {
     commands
         .spawn((
             widget::ui_root("Item Buttons"),
-            GlobalZIndex(2),
+            GlobalZIndex(0),
             StateScoped(Screen::Gameplay),
             children![
                 widget::item_button(
@@ -66,9 +67,13 @@ fn spawn_item_buttons(mut commands: Commands, item_assets: Res<ItemAssets>) {
             height: Val::Percent(100.0),
             flex_direction: FlexDirection::Column,
             row_gap: Val::Px(16.0),
-            left: Val::Percent(60.0),
+            left: Val::Percent(80.0),
             ..Default::default()
         });
+}
+
+fn init_edit_state(mut selected_item: ResMut<SelectedItem>) {
+    selected_item.0 = None; // Reset selected item
 }
 
 #[derive(Debug, Clone, Copy, Event)]

@@ -27,7 +27,7 @@ fn init_result_state(mut commands: Commands) {
 }
 
 fn retry_level(_: Trigger<Pointer<Click>>, mut next_phase: ResMut<NextState<GamePhase>>) {
-    next_phase.set(GamePhase::Setup);
+    next_phase.set(GamePhase::Init);
 }
 
 fn go_home(_: Trigger<Pointer<Click>>, mut next_screen: ResMut<NextState<Screen>>) {
@@ -40,5 +40,5 @@ fn next_level(
     mut current_level: ResMut<CurrentLevel>,
 ) {
     current_level.0 += 1; // Increment the current level
-    next_phase.set(GamePhase::Setup);
+    next_phase.set(GamePhase::Init);
 }

@@ -7,17 +7,17 @@ use bevy::prelude::*;
 
 use crate::screens::Screen;
 
+mod edit;
 mod init_level;
 mod result;
 mod run;
-mod setup;
 
 pub use init_level::CurrentLevel;
 use init_level::{GridCoord, Item, ItemAssets, ItemState, ObjectMap};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_sub_state::<GamePhase>().add_plugins((
-        setup::plugin,
+        edit::plugin,
         init_level::plugin,
         run::plugin,
         result::plugin,
@@ -29,7 +29,8 @@ pub(super) fn plugin(app: &mut App) {
 #[states(scoped_entities)]
 enum GamePhase {
     #[default]
-    Setup,
+    Init,
+    Edit,
     Run,
     Result,
 }
