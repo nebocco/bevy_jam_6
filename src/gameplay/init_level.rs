@@ -16,7 +16,7 @@ use crate::{
     audio::music,
     gameplay::{
         GamePhase,
-        edit::{CreateObject, SelectedItem},
+        edit::{CreateFire, CreateObject, SelectedItem},
     },
     screens::Screen,
 };
@@ -28,8 +28,7 @@ pub(super) fn plugin(app: &mut App) {
     app.load_resource::<BgAssets>()
         .load_resource::<ItemAssets>()
         .load_resource::<LevelAssets>()
-        .init_resource::<CurrentLevel>()
-        .init_resource::<ObjectMap>();
+        .init_resource::<CurrentLevel>();
     app.add_systems(
         OnEnter(GamePhase::Init),
         (despawn_old_level, spawn_level, move_to_edit_phase).chain(),
@@ -189,7 +188,6 @@ pub enum Item {
     Rock,
     Gem,
     Eraser,
-    Fire,
     Enemy,
 }
 
@@ -212,7 +210,6 @@ impl Item {
             Item::BombLarge => 2,
             Item::BombHorizontal => 3,
             Item::BombVertical => 4,
-            Item::Fire => 5,
             Item::Eraser => 6,
             Item::Rock => 8,
             Item::Gem => 10,
@@ -335,10 +332,9 @@ impl Item {
                 (-5, 0),
             ],
 
-            Item::Fire => &[(0, 0)],
+            Item::Eraser => &[(0, 0)],
 
-            // Eraser does not have an impact zone.
-            Item::Rock | Item::Gem | Item::Eraser | Item::Enemy => &[],
+            Item::Rock | Item::Gem | Item::Enemy => &[],
         }
     }
 }
@@ -369,7 +365,6 @@ fn spawn_level(
     item_assets: Res<ItemAssets>,
     current_level: Res<CurrentLevel>,
     level_layouts: Res<Assets<LevelLayout>>,
-    object_map: ResMut<ObjectMap>,
 ) {
     let level_layout = level_layouts
         .get(&current_level.layout)
@@ -387,9 +382,7 @@ fn spawn_level(
                 music(level_assets.music.clone())
             )],
         ))
-        .with_children(|parent| {
-            spawn_grid(parent, bg_assets, item_assets, level_layout, object_map)
-        })
+        .with_children(|parent| spawn_grid(parent, bg_assets, item_assets, level_layout))
         .observe(reset_tint_colors);
 }
 
@@ -400,7 +393,6 @@ fn spawn_grid(
     bg_assets: Res<BgAssets>,
     item_assets: Res<ItemAssets>,
     level_layout: &LevelLayout,
-    mut object_map: ResMut<ObjectMap>,
 ) {
     commands
         .spawn((
@@ -412,15 +404,7 @@ fn spawn_grid(
         .with_children(move |parent| {
             (0..level_layout.board_size.0).for_each(|x| {
                 (0..level_layout.board_size.1).for_each(|y| {
-                    spawn_grid_cell(
-                        parent,
-                        level_layout,
-                        x,
-                        y,
-                        &bg_assets,
-                        &item_assets,
-                        &mut object_map,
-                    );
+                    spawn_grid_cell(parent, level_layout, x, y, &bg_assets, &item_assets);
                 });
             });
         });
@@ -433,7 +417,6 @@ fn spawn_grid_cell(
     y: u8,
     bg_assets: &Res<BgAssets>,
     item_assets: &Res<ItemAssets>,
-    object_map: &mut ResMut<ObjectMap>,
 ) {
     let scale_factor = 2.0;
     let cell_size = CELL_SIZE_BASE * scale_factor;
@@ -492,9 +475,6 @@ fn spawn_grid_cell(
                     StateScoped(Screen::Gameplay),
                 ))
                 .id();
-            object_map
-                .objects
-                .insert(GridCoord { x, y }, (item, item_entity));
         });
 
         // gray out the tile sprite to indicate that interactions are disabled
@@ -528,19 +508,21 @@ fn spawn_grid_cell(
                                 println!("No item selected, skipping object creation.");
                                 return;
                             };
-                            item
+                            commands.trigger(CreateObject {
+                                parent_grid: entity,
+                                coord,
+                                item,
+                            });
                         }
                         PointerButton::Secondary | _ => {
                             println!("Using eraser, removing object at coord: {:?}", coord);
-                            Item::Fire
+                            commands.trigger(CreateFire {
+                                parent_grid: entity,
+                                coord,
+                            });
                         }
                     };
                     println!("Creating object with item: {:?}", item);
-                    commands.trigger(CreateObject {
-                        parent_grid: entity,
-                        coord,
-                        item,
-                    });
                 },
             );
     }

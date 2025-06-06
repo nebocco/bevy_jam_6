@@ -1,8 +1,8 @@
-use bevy::prelude::*;
+use bevy::{ecs::query, prelude::*};
 
 use crate::{
     PausableSystems,
-    gameplay::{GamePhase, GridCoord, Item, ItemAssets, ItemState, ObjectMap},
+    gameplay::{CurrentLevel, GamePhase, GridCoord, Item, ItemAssets, ItemState},
     screens::Screen,
     theme::widget,
 };
@@ -83,6 +83,15 @@ pub struct CreateObject {
     pub item: Item,
 }
 
+#[derive(Event, Debug)]
+pub struct CreateFire {
+    pub parent_grid: Entity,
+    pub coord: GridCoord,
+}
+
+#[derive(Component, Debug)]
+pub struct Fire;
+
 #[derive(Resource, Debug, Clone, Copy, Default)]
 pub(super) struct SelectedItem(pub Option<Item>);
 
@@ -102,18 +111,15 @@ fn create_object(
     trigger: Trigger<CreateObject>,
     mut commands: Commands,
     item_assets: Res<ItemAssets>,
-    mut object_map: ResMut<ObjectMap>,
+    query: Query<(Entity, &Item, &GridCoord)>,
 ) {
     let event = trigger.event();
     println!("Creating object at coord: {:?}", event.coord);
-    println!("{:?}", &object_map.objects);
+    println!("{:?}", query.iter().collect::<Vec<_>>());
 
-    if event.item == Item::Fire {
-        try_create_fire(event, &mut commands, item_assets, &mut object_map);
-        return;
-    }
-
-    if let Some((_, existing_entity)) = object_map.objects.remove(&event.coord) {
+    if let Some((existing_entity, _item, _coord)) =
+        query.iter().find(|&(_, _, coord)| coord == &event.coord)
+    {
         commands.entity(existing_entity).despawn();
     }
 
@@ -140,68 +146,69 @@ fn create_object(
         .id();
 
     commands.entity(event.parent_grid).add_child(entity);
-    object_map.objects.insert(event.coord, (event.item, entity));
 }
 
 fn try_create_fire(
-    event: &CreateObject,
+    trigger: Trigger<CreateFire>,
     commands: &mut Commands,
+    item_query: &Query<(Entity, &Item, &GridCoord), Without<Fire>>,
+    fire_query: &Query<(Entity, &GridCoord), With<Fire>>,
     item_assets: Res<ItemAssets>,
-    object_map: &mut ResMut<ObjectMap>,
 ) {
     // if there is no bomb at the coordinate, do nothing
-    match object_map.objects.get(&event.coord) {
-        Some((item, _)) if item.is_bomb() => {}
-        _ => {
-            return;
-        }
-    }
+    let Some((parent_entity, item, coord)) = item_query
+        .iter()
+        .find(|&(_, item, coord)| item.is_bomb() && *coord == trigger.coord)
+    else {
+        println!("No bomb object found at the coordinate.");
+        return;
+    };
 
-    if let Some((fire_coord, fire_entity)) = object_map.fire.take() {
+    if let Ok((fire_entity, &fire_coord)) = fire_query.single() {
         commands.entity(fire_entity).despawn();
-        if fire_coord == event.coord {
+        if fire_coord == trigger.coord {
             println!("Fire already exists at this coordinate, skipping creation.");
             return;
         }
     }
-    let entity = commands
-        .spawn((
-            Name::new("Fire Object"),
-            GridCoord::clone(&event.coord),
-            Item::Fire,
-            Sprite::from_atlas_image(
-                item_assets.sprite_sheet.clone(),
-                TextureAtlas {
-                    layout: item_assets.texture_atlas_layout.clone(),
-                    index: 5,
-                },
-            ),
-            Transform::from_scale(Vec3::splat(2.0)).with_translation(Vec3::new(0.0, 0.0, 2.0)),
-            StateScoped(Screen::Gameplay),
-        ))
-        .id();
-    commands.entity(event.parent_grid).add_child(entity);
-    object_map.fire = Some((event.coord, entity));
+
+    commands.entity(parent_entity).with_child((
+        Name::new("Fire Object"),
+        GridCoord::clone(&trigger.coord),
+        Fire,
+        Sprite::from_atlas_image(
+            item_assets.sprite_sheet.clone(),
+            TextureAtlas {
+                layout: item_assets.texture_atlas_layout.clone(),
+                index: 5,
+            },
+        ),
+        Transform::from_scale(Vec3::splat(2.0)).with_translation(Vec3::new(0.0, 0.0, 2.0)),
+        StateScoped(Screen::Gameplay),
+    ));
 }
 
 fn reset_all_object_placements(
     button_input: Res<ButtonInput<KeyCode>>,
-    mut commands: Commands,
-    mut object_map: ResMut<ObjectMap>,
+    mut next_state: ResMut<NextState<GamePhase>>,
 ) {
     if button_input.just_pressed(KeyCode::KeyR) {
-        for (_key, (_item, entity)) in object_map.objects.drain() {
-            commands.entity(entity).despawn();
-        }
+        next_state.set(GamePhase::Init);
     }
 }
 
 fn run_simulation(
     button_input: Res<ButtonInput<KeyCode>>,
+    fire_query: Query<Entity, With<Fire>>,
     mut next_state: ResMut<NextState<GamePhase>>,
 ) {
     if button_input.just_pressed(KeyCode::Space) {
-        println!("Running simulation...");
-        next_state.set(GamePhase::Run);
+        if fire_query.is_empty() {
+            println!("No fire objects found, cannot run simulation.");
+            return;
+        } else {
+            println!("Fire objects found, proceeding with simulation.");
+            next_state.set(GamePhase::Run);
+        }
     }
 }

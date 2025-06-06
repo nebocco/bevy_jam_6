@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Debug};
 
 use bevy::prelude::*;
 
-use crate::gameplay::{GamePhase, GridCoord, Item, ItemState, ObjectMap};
+use crate::gameplay::{GamePhase, GridCoord, Item, ItemState, edit::Fire};
 
 pub(super) fn plugin(app: &mut App) {
     app.init_resource::<RunningState>()
@@ -38,21 +38,32 @@ fn init_run_state(
     mut timer: ResMut<RunningTimer>,
     mut running_state: ResMut<RunningState>,
     mut burning_stack: ResMut<BurningStack>,
-    object_map: Res<ObjectMap>,
+    item_query: Query<(Entity, &Item, &GridCoord), Without<Fire>>,
+    fire_query: Query<(Entity, &GridCoord), With<Fire>>,
 ) {
     println!("Initializing run state...");
     timer.0.reset();
 
-    running_state.object_map = object_map.objects.clone();
+    running_state.object_map = item_query
+        .iter()
+        .map(|(entity, &item, &coord)| (coord, (item, entity)))
+        .collect();
     running_state.tick = 0;
 
-    let (fire_coord, _fire_entity) = object_map.fire.expect("Fire item not found in object map");
-    let (burning_item, burning_item_entity) = object_map
-        .objects
-        .get(&fire_coord)
-        .cloned()
+    let (_fire_entity, fire_coord) = fire_query
+        .single()
         .expect("Fire item not found in object map");
-    burning_stack.0 = vec![(fire_coord, burning_item, burning_item_entity)];
+    burning_stack.0 = running_state
+        .object_map
+        .iter()
+        .filter_map(|(&coord, &(item, entity))| {
+            if coord == *fire_coord {
+                Some((coord, item, entity))
+            } else {
+                None
+            }
+        })
+        .collect();
 }
 
 fn tick_timer(

@@ -14,7 +14,7 @@ mod result;
 mod run;
 
 pub use init_level::{CurrentLevel, LevelAssets};
-use init_level::{GridCoord, Item, ItemAssets, ItemState, ObjectMap};
+use init_level::{GridCoord, Item, ItemAssets, ItemState};
 pub use result::{ClearedLevels, move_to_level};
 
 pub(super) fn plugin(app: &mut App) {
