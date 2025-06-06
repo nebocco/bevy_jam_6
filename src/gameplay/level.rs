@@ -5,9 +5,10 @@ use std::{collections::HashMap, fmt::Debug};
 use bevy::{
     asset::{AssetLoader, LoadContext, io::Reader},
     color::palettes,
-    ecs::relationship::RelatedSpawnerCommands,
+    ecs::{event, relationship::RelatedSpawnerCommands},
     input::{ButtonState, keyboard::KeyboardInput},
     prelude::*,
+    state::commands,
 };
 use serde::{Deserialize, Serialize};
 
@@ -17,7 +18,7 @@ use crate::{
     demo::level,
     gameplay::{
         GamePhase,
-        setup::{self, BgAssets},
+        setup::{self, BgAssets, ItemAssets},
     },
     screens::Screen,
 };
@@ -32,7 +33,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_plugins(MeshPickingPlugin)
         .add_event::<CreateObject>();
     app.add_systems(
-        OnEnter(Screen::Gameplay),
+        OnEnter(GamePhase::Setup),
         (despawn_old_level, spawn_level).chain(),
     )
     .add_observer(create_object)
@@ -252,7 +253,7 @@ fn spawn_grid_cell(
         .observe(
             move |out: Trigger<Pointer<Out>>, mut sprite: Query<&mut Sprite>| {
                 let mut sprite = sprite.get_mut(out.target()).unwrap();
-                sprite.color = Color::Srgba(palettes::basic::BLACK);
+                sprite.color = Default::default();
             },
         )
         .observe(
@@ -329,7 +330,7 @@ pub enum ItemState {
 fn create_object(
     trigger: Trigger<CreateObject>,
     mut commands: Commands,
-    item_assets: Res<setup::ItemAssets>,
+    item_assets: Res<ItemAssets>,
     mut object_map: ResMut<ObjectMap>,
 ) {
     let event = trigger.event();
@@ -337,25 +338,7 @@ fn create_object(
     println!("{:?}", &object_map.objects);
 
     if event.item == setup::Item::Fire {
-        if let Some((fire_coord, fire_entity)) = object_map.fire.take() {
-            commands.entity(fire_entity).despawn();
-            if fire_coord == event.coord {
-                println!("Fire already exists at this coordinate, skipping creation.");
-                return;
-            }
-        }
-        let entity = commands
-            .spawn((
-                Name::new("Fire Object"),
-                GridCoord::clone(&event.coord),
-                setup::Item::Fire,
-                Sprite::from_color(palettes::basic::RED, Vec2::splat(8.0)),
-                Transform::from_xyz(8.0, 8.0, 3.0).with_scale(Vec3::splat(2.0)),
-                StateScoped(Screen::Gameplay),
-            ))
-            .id();
-        commands.entity(event.parent_grid).add_child(entity);
-        object_map.fire = Some((event.coord, entity));
+        try_create_fire(event, &mut commands, item_assets, &mut object_map);
         return;
     }
 
@@ -363,26 +346,69 @@ fn create_object(
         commands.entity(existing_entity).despawn();
     }
 
-    if event.item != setup::Item::Eraser {
-        let entity = commands
-            .spawn((
-                Name::new("Item Object"),
-                GridCoord::clone(&event.coord),
-                setup::Item::clone(&event.item),
-                ItemState::None,
-                Sprite::from_atlas_image(
-                    item_assets.sprite_sheet.clone(),
-                    TextureAtlas {
-                        layout: item_assets.texture_atlas_layout.clone(),
-                        index: event.item as usize,
-                    },
-                ),
-                Transform::from_scale(Vec3::splat(2.0)),
-                StateScoped(Screen::Gameplay),
-            ))
-            .id();
-
-        commands.entity(event.parent_grid).add_child(entity);
-        object_map.objects.insert(event.coord, (event.item, entity));
+    if event.item == setup::Item::Eraser {
+        return;
     }
+
+    let entity = commands
+        .spawn((
+            Name::new("Item Object"),
+            GridCoord::clone(&event.coord),
+            setup::Item::clone(&event.item),
+            ItemState::None,
+            Sprite::from_atlas_image(
+                item_assets.sprite_sheet.clone(),
+                TextureAtlas {
+                    layout: item_assets.texture_atlas_layout.clone(),
+                    index: event.item as usize,
+                },
+            ),
+            Transform::from_scale(Vec3::splat(2.0)),
+            StateScoped(Screen::Gameplay),
+        ))
+        .id();
+
+    commands.entity(event.parent_grid).add_child(entity);
+    object_map.objects.insert(event.coord, (event.item, entity));
+}
+
+fn try_create_fire(
+    event: &CreateObject,
+    commands: &mut Commands,
+    item_assets: Res<ItemAssets>,
+    object_map: &mut ResMut<ObjectMap>,
+) {
+    // if there is no bomb at the coordinate, do nothing
+    match object_map.objects.get(&event.coord) {
+        Some((item, _)) if item.is_bomb() => {}
+        _ => {
+            return;
+        }
+    }
+
+    if let Some((fire_coord, fire_entity)) = object_map.fire.take() {
+        commands.entity(fire_entity).despawn();
+        if fire_coord == event.coord {
+            println!("Fire already exists at this coordinate, skipping creation.");
+            return;
+        }
+    }
+    let entity = commands
+        .spawn((
+            Name::new("Fire Object"),
+            GridCoord::clone(&event.coord),
+            setup::Item::Fire,
+            Sprite::from_atlas_image(
+                item_assets.sprite_sheet.clone(),
+                TextureAtlas {
+                    layout: item_assets.texture_atlas_layout.clone(),
+                    index: 5,
+                },
+            ),
+            Transform::from_scale(Vec3::splat(2.0)),
+            StateScoped(Screen::Gameplay),
+        ))
+        .id();
+    commands.entity(event.parent_grid).add_child(entity);
+    object_map.fire = Some((event.coord, entity));
 }

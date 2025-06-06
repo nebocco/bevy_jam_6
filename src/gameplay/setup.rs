@@ -79,6 +79,23 @@ pub(super) enum Item {
 }
 
 impl Item {
+    pub fn is_bomb(&self) -> bool {
+        matches!(
+            self,
+            Item::BombSmall
+                | Item::BombMedium
+                | Item::BombLarge
+                | Item::BombVertical
+                | Item::BombHorizontal
+        )
+    }
+
+    pub fn is_eraser(&self) -> bool {
+        matches!(self, Item::Eraser)
+    }
+}
+
+impl Item {
     pub fn impact_zone(&self) -> &'static [(i8, i8)] {
         match self {
             // . . . . .
