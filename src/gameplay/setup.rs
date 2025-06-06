@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     PausableSystems,
-    gameplay::{GamePhase, GridCoord, Item, ItemAssets, ItemState},
+    gameplay::{GamePhase, GridCoord, Item, ItemAssets, ItemState, ObjectMap},
     screens::Screen,
     theme::widget,
 };
@@ -15,7 +15,6 @@ pub(super) fn plugin(app: &mut App) {
     app.init_resource::<SelectedItem>();
     app.add_systems(OnEnter(Screen::Gameplay), spawn_item_buttons)
         .add_plugins(MeshPickingPlugin)
-        .init_resource::<ObjectMap>()
         .add_event::<CreateObject>()
         .add_observer(create_object)
         .add_systems(
@@ -54,7 +53,7 @@ fn spawn_item_buttons(mut commands: Commands, item_assets: Res<ItemAssets>) {
                 widget::item_button(
                     Handle::clone(&item_assets.sprite_sheet),
                     Handle::clone(&item_assets.texture_atlas_layout),
-                    8,
+                    7,
                     select_item::<255> // Eraser
                 ),
             ],
@@ -70,12 +69,6 @@ fn spawn_item_buttons(mut commands: Commands, item_assets: Res<ItemAssets>) {
             left: Val::Percent(60.0),
             ..Default::default()
         });
-}
-
-#[derive(Resource, Debug, Clone, Default)]
-pub struct ObjectMap {
-    pub objects: std::collections::HashMap<GridCoord, (Item, Entity)>,
-    pub fire: Option<(GridCoord, Entity)>,
 }
 
 #[derive(Debug, Clone, Copy, Event)]
@@ -136,7 +129,7 @@ fn create_object(
                     index: event.item as usize,
                 },
             ),
-            Transform::from_scale(Vec3::splat(2.0)),
+            Transform::from_scale(Vec3::splat(2.0)).with_translation(Vec3::new(0.0, 0.0, 1.0)),
             StateScoped(Screen::Gameplay),
         ))
         .id();
@@ -178,7 +171,7 @@ fn try_create_fire(
                     index: 5,
                 },
             ),
-            Transform::from_scale(Vec3::splat(2.0)),
+            Transform::from_scale(Vec3::splat(2.0)).with_translation(Vec3::new(0.0, 0.0, 2.0)),
             StateScoped(Screen::Gameplay),
         ))
         .id();

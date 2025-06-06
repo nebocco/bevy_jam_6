@@ -13,8 +13,7 @@ mod run;
 mod setup;
 
 pub use init_level::CurrentLevel;
-use init_level::{GridCoord, Item, ItemAssets, ItemState};
-use setup::ObjectMap;
+use init_level::{GridCoord, Item, ItemAssets, ItemState, ObjectMap};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_sub_state::<GamePhase>().add_plugins((
