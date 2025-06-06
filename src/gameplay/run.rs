@@ -99,18 +99,6 @@ fn tick_simulation(
     filtered_burning_stack.sort_by_key(|(_, _, entity)| *entity);
     filtered_burning_stack.dedup_by_key(|(_, _, entity)| *entity);
 
-    // explode animation
-    filtered_burning_stack
-        .iter()
-        .for_each(|&(coord, item, entity)| {
-            let mut item_state = query.get_mut(entity).expect("Entity not found in query");
-            *item_state = ItemState::Burned;
-            commands.trigger(Explode {
-                item,
-                parent_entity: entity,
-            });
-        });
-
     let affected_area = compute_affected_area(&filtered_burning_stack);
 
     let affected_items: Vec<_> = affected_area
@@ -122,7 +110,30 @@ fn tick_simulation(
                 .map(|&(item, entity)| (coord, item, entity))
         })
         .collect();
-    burning_stack.0 = affected_items;
+
+    // explode animation
+    filtered_burning_stack
+        .iter()
+        .filter(|&(_, item, _)| item.is_bomb())
+        .chain(
+            affected_items
+                .iter()
+                .filter(|&(_, item, _)| !item.is_bomb()),
+        )
+        .for_each(|&(_coord, item, entity)| {
+            let mut item_state = query.get_mut(entity).expect("Entity not found in query");
+            *item_state = ItemState::Burned;
+            commands.trigger(Explode {
+                item,
+                parent_entity: entity,
+            });
+        });
+
+    // preserve bombs in the burning stackz
+    burning_stack.0 = affected_items
+        .into_iter()
+        .filter(|&(_coord, item, _entity)| item.is_bomb())
+        .collect();
 
     println!("next stack: {:?}", &burning_stack);
 }

@@ -8,7 +8,9 @@ use bevy::{
 use std::time::Duration;
 
 use crate::{
-    AppSystems, PausableSystems, asset_tracking::LoadResource, gameplay::run::Explode,
+    AppSystems, PausableSystems,
+    asset_tracking::LoadResource,
+    gameplay::{init_level::Item, run::Explode},
     theme::palette,
 };
 
@@ -30,8 +32,9 @@ pub(super) fn plugin(app: &mut App) {
 }
 
 pub fn explosion(trigger: Trigger<Explode>, mut commands: Commands, asset: Res<ExplosionAssets>) {
+    let mut entity_builder = commands.entity(trigger.parent_entity);
+
     if trigger.item.is_bomb() {
-        let mut entity_builder = commands.entity(trigger.parent_entity);
         // Make the exploded bomb red
         entity_builder.entry::<Sprite>().and_modify(|mut sprite| {
             sprite.color = Color::Srgba(palettes::css::RED.with_alpha(0.3));
@@ -39,7 +42,6 @@ pub fn explosion(trigger: Trigger<Explode>, mut commands: Commands, asset: Res<E
 
         // create explosion animation as a child
         entity_builder.with_children(|parent| {
-            let explode = ExplodeAnimation::new();
             parent.spawn((
                 Name::new("Explosion Animation"),
                 Sprite::from_atlas_image(
@@ -50,7 +52,53 @@ pub fn explosion(trigger: Trigger<Explode>, mut commands: Commands, asset: Res<E
                     },
                 ),
                 Transform::from_xyz(0.0, 0.0, 4.0).with_scale(Vec2::splat(3.0).extend(1.0)),
-                explode,
+                ExplodeAnimation::new(),
+            ));
+        });
+    } else if trigger.item == Item::Rock {
+        // change the sprite to a destroyed rock
+        entity_builder.entry::<Sprite>().and_modify(|mut sprite| {
+            sprite.texture_atlas.iter_mut().for_each(|atlas| {
+                atlas.index = 9;
+            });
+        });
+
+        // create destroyed rock animation as a child
+        entity_builder.with_children(|parent| {
+            parent.spawn((
+                Name::new("Destroyed Rock Animation"),
+                Sprite::from_atlas_image(
+                    Handle::clone(&asset.destroyed_image),
+                    TextureAtlas {
+                        layout: Handle::clone(&asset.texture_atlas_layout),
+                        index: 9, // dummy empty index
+                    },
+                ),
+                Transform::from_xyz(0.0, 0.0, 4.0).with_scale(Vec2::splat(2.0).extend(1.0)),
+                ExplodeAnimation::new(),
+            ));
+        });
+    } else if trigger.item == Item::Gem {
+        // change the sprite to a destroyed gem
+        entity_builder.entry::<Sprite>().and_modify(|mut sprite| {
+            sprite.texture_atlas.iter_mut().for_each(|atlas| {
+                atlas.index = 11;
+            });
+        });
+
+        // create destroyed gem animation as a child
+        entity_builder.with_children(|parent| {
+            parent.spawn((
+                Name::new("Destroyed Gem Animation"),
+                Sprite::from_atlas_image(
+                    Handle::clone(&asset.destroyed_image),
+                    TextureAtlas {
+                        layout: Handle::clone(&asset.texture_atlas_layout),
+                        index: 9, // dummy empty index
+                    },
+                ),
+                Transform::from_xyz(0.0, 0.0, 4.0).with_scale(Vec2::splat(2.0).extend(1.0)),
+                ExplodeAnimation::new(),
             ));
         });
     }
@@ -103,6 +151,8 @@ fn update_animation_atlas(mut query: Query<(&ExplodeAnimation, &mut Sprite, &mut
 pub struct ExplosionAssets {
     #[dependency]
     explosion_image: Handle<Image>,
+    #[dependency]
+    destroyed_image: Handle<Image>,
     texture_atlas_layout: Handle<TextureAtlasLayout>,
     #[dependency]
     sound_effect: Handle<AudioSource>,
@@ -126,6 +176,13 @@ impl FromWorld for ExplosionAssets {
         Self {
             explosion_image: assets.load_with_settings(
                 "images/explosion_01.png",
+                |settings: &mut ImageLoaderSettings| {
+                    // Use `nearest` image sampling to preserve pixel art style.
+                    settings.sampler = ImageSampler::nearest();
+                },
+            ),
+            destroyed_image: assets.load_with_settings(
+                "images/explosion_26.png",
                 |settings: &mut ImageLoaderSettings| {
                     // Use `nearest` image sampling to preserve pixel art style.
                     settings.sampler = ImageSampler::nearest();

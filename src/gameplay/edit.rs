@@ -1,8 +1,8 @@
-use bevy::{ecs::query, prelude::*};
+use bevy::prelude::*;
 
 use crate::{
     PausableSystems,
-    gameplay::{CurrentLevel, GamePhase, GridCoord, Item, ItemAssets, ItemState},
+    gameplay::{GamePhase, GridCoord, Item, ItemAssets, ItemState},
     screens::Screen,
     theme::widget,
 };
@@ -13,10 +13,13 @@ pub(super) fn plugin(app: &mut App) {
     // app.register_type::<ItemAssets>();
 
     app.init_resource::<SelectedItem>();
-    app.add_systems(OnEnter(Screen::Gameplay), spawn_item_buttons)
-        .add_plugins(MeshPickingPlugin)
-        .add_event::<CreateObject>()
+
+    app
+        // .add_event::<CreateObject>()
         .add_observer(create_object)
+        .add_observer(try_create_fire);
+
+    app.add_systems(OnEnter(Screen::Gameplay), spawn_item_buttons)
         .add_systems(OnEnter(GamePhase::Edit), init_edit_state)
         .add_systems(
             Update,
@@ -76,14 +79,14 @@ fn init_edit_state(mut selected_item: ResMut<SelectedItem>) {
     selected_item.0 = None; // Reset selected item
 }
 
-#[derive(Debug, Clone, Copy, Event)]
+#[derive(Debug, Clone, Event)]
 pub struct CreateObject {
     pub parent_grid: Entity,
     pub coord: GridCoord,
     pub item: Item,
 }
 
-#[derive(Event, Debug)]
+#[derive(Event, Debug, Clone)]
 pub struct CreateFire {
     pub parent_grid: Entity,
     pub coord: GridCoord,
@@ -150,13 +153,14 @@ fn create_object(
 
 fn try_create_fire(
     trigger: Trigger<CreateFire>,
-    commands: &mut Commands,
-    item_query: &Query<(Entity, &Item, &GridCoord), Without<Fire>>,
-    fire_query: &Query<(Entity, &GridCoord), With<Fire>>,
+    mut commands: Commands,
+    item_query: Query<(Entity, &Item, &GridCoord), Without<Fire>>,
+    fire_query: Query<(Entity, &GridCoord), With<Fire>>,
     item_assets: Res<ItemAssets>,
 ) {
+    println!("Attempting to create fire at coord: {:?}", trigger.coord);
     // if there is no bomb at the coordinate, do nothing
-    let Some((parent_entity, item, coord)) = item_query
+    let Some((parent_entity, _item, _coord)) = item_query
         .iter()
         .find(|&(_, item, coord)| item.is_bomb() && *coord == trigger.coord)
     else {
@@ -183,7 +187,7 @@ fn try_create_fire(
                 index: 5,
             },
         ),
-        Transform::from_scale(Vec3::splat(2.0)).with_translation(Vec3::new(0.0, 0.0, 2.0)),
+        Transform::from_translation(Vec3::new(0.0, 0.0, 2.0)),
         StateScoped(Screen::Gameplay),
     ));
 }

@@ -351,10 +351,17 @@ impl From<u8> for Item {
     }
 }
 
-fn despawn_old_level(mut commands: Commands, query: Query<Entity, With<LevelBase>>) {
+fn despawn_old_level(
+    mut commands: Commands,
+    query: Query<Entity, With<LevelBase>>,
+    mut selected_item: ResMut<SelectedItem>,
+) {
     for entity in query.iter() {
         commands.entity(entity).despawn();
     }
+
+    // Reset the selected item when the level is despawned
+    selected_item.0 = None;
 }
 
 /// A system that spawns the main level.
@@ -370,7 +377,7 @@ fn spawn_level(
         .get(&current_level.layout)
         .expect("Level layout not found");
 
-    commands
+    let entity = commands
         .spawn((
             Name::new("Level"),
             LevelBase,
@@ -458,23 +465,20 @@ fn spawn_grid_cell(
         println!("Spawning item {:?} at ({}, {})", item, x, y);
 
         entity_builder.with_children(|parent| {
-            let item_entity = parent
-                .spawn((
-                    item,
-                    ItemState::None,
-                    GridCoord { x, y },
-                    Sprite::from_atlas_image(
-                        item_assets.sprite_sheet.clone(),
-                        TextureAtlas {
-                            layout: item_assets.texture_atlas_layout.clone(),
-                            index: item.to_sprite_index(),
-                        },
-                    ),
-                    Transform::from_scale(Vec3::splat(2.0))
-                        .with_translation(Vec3::new(0.0, 0.0, 1.0)),
-                    StateScoped(Screen::Gameplay),
-                ))
-                .id();
+            parent.spawn((
+                item,
+                ItemState::None,
+                GridCoord { x, y },
+                Sprite::from_atlas_image(
+                    item_assets.sprite_sheet.clone(),
+                    TextureAtlas {
+                        layout: item_assets.texture_atlas_layout.clone(),
+                        index: item.to_sprite_index(),
+                    },
+                ),
+                Transform::from_scale(Vec3::splat(2.0)).with_translation(Vec3::new(0.0, 0.0, 1.0)),
+                StateScoped(Screen::Gameplay),
+            ));
         });
 
         // gray out the tile sprite to indicate that interactions are disabled
@@ -486,45 +490,36 @@ fn spawn_grid_cell(
         });
     } else {
         // if there is no item at the coordinate, interactions are enabled
-        entity_builder
-            .observe(
-                // move |over: Trigger<Pointer<Over>>, mut sprite: Query<&mut Sprite>| {
-                //     let mut sprite = sprite.get_mut(over.target()).unwrap();
-                //     sprite.color = Color::Srgba(palettes::basic::BLUE);
-                // },
-                recolor_cells,
-            )
-            .observe(
-                |out: Trigger<Pointer<Pressed>>,
-                 coord: Query<&GridCoord>,
-                 selected_item: Res<SelectedItem>,
-                 mut commands: Commands| {
-                    let entity = out.target();
-                    let &coord = coord.get(entity).unwrap();
-                    println!("Creating object at coord: {:?}", coord);
-                    let item = match out.button {
-                        PointerButton::Primary => {
-                            let Some(item) = selected_item.0 else {
-                                println!("No item selected, skipping object creation.");
-                                return;
-                            };
-                            commands.trigger(CreateObject {
-                                parent_grid: entity,
-                                coord,
-                                item,
-                            });
-                        }
-                        PointerButton::Secondary | _ => {
-                            println!("Using eraser, removing object at coord: {:?}", coord);
-                            commands.trigger(CreateFire {
-                                parent_grid: entity,
-                                coord,
-                            });
-                        }
-                    };
-                    println!("Creating object with item: {:?}", item);
-                },
-            );
+        entity_builder.observe(recolor_cells).observe(
+            |out: Trigger<Pointer<Pressed>>,
+             coord: Query<&GridCoord>,
+             selected_item: Res<SelectedItem>,
+             mut commands: Commands| {
+                let entity = out.target();
+                let &coord = coord.get(entity).unwrap();
+                println!("Creating object at coord: {:?}", coord);
+                let item = match out.button {
+                    PointerButton::Primary => {
+                        let Some(item) = selected_item.0 else {
+                            println!("No item selected, skipping object creation.");
+                            return;
+                        };
+                        commands.trigger(CreateObject {
+                            parent_grid: entity,
+                            coord,
+                            item,
+                        });
+                    }
+                    PointerButton::Secondary | _ => {
+                        commands.trigger(CreateFire {
+                            parent_grid: entity,
+                            coord,
+                        });
+                    }
+                };
+                println!("Creating object with item: {:?}", item);
+            },
+        );
     }
 }
 
