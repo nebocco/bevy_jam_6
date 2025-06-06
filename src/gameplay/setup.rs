@@ -1,11 +1,9 @@
-use bevy::{
-    image::{ImageLoaderSettings, ImageSampler},
-    prelude::*,
-};
-use serde::{Deserialize, Serialize};
+use bevy::prelude::*;
 
 use crate::{
-    AppSystems, PausableSystems, asset_tracking::LoadResource, menus::Menu, screens::Screen,
+    PausableSystems,
+    gameplay::{GamePhase, GridCoord, Item, ItemAssets, ItemState},
+    screens::Screen,
     theme::widget,
 };
 
@@ -13,10 +11,19 @@ pub(super) fn plugin(app: &mut App) {
     // app.register_type::<Item>();
 
     // app.register_type::<ItemAssets>();
-    app.load_resource::<ItemAssets>()
-        .load_resource::<BgAssets>();
+
     app.init_resource::<SelectedItem>();
-    app.add_systems(OnEnter(Screen::Gameplay), spawn_item_buttons);
+    app.add_systems(OnEnter(Screen::Gameplay), spawn_item_buttons)
+        .add_plugins(MeshPickingPlugin)
+        .init_resource::<ObjectMap>()
+        .add_event::<CreateObject>()
+        .add_observer(create_object)
+        .add_systems(
+            Update,
+            (reset_all_object_placements, run_simulation)
+                .run_if(in_state(GamePhase::Setup))
+                .in_set(PausableSystems),
+        );
 }
 
 fn spawn_item_buttons(mut commands: Commands, item_assets: Res<ItemAssets>) {
@@ -65,168 +72,17 @@ fn spawn_item_buttons(mut commands: Commands, item_assets: Res<ItemAssets>) {
         });
 }
 
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize, Reflect)]
-pub(super) enum Item {
-    BombSmall,
-    BombMedium,
-    BombLarge,
-    BombVertical,
-    BombHorizontal,
-    Rock,
-    Gem,
-    Eraser,
-    Fire,
+#[derive(Resource, Debug, Clone, Default)]
+pub struct ObjectMap {
+    pub objects: std::collections::HashMap<GridCoord, (Item, Entity)>,
+    pub fire: Option<(GridCoord, Entity)>,
 }
 
-impl Item {
-    pub fn is_bomb(&self) -> bool {
-        matches!(
-            self,
-            Item::BombSmall
-                | Item::BombMedium
-                | Item::BombLarge
-                | Item::BombVertical
-                | Item::BombHorizontal
-        )
-    }
-
-    pub fn is_eraser(&self) -> bool {
-        matches!(self, Item::Eraser)
-    }
-}
-
-impl Item {
-    pub fn impact_zone(&self) -> &'static [(i8, i8)] {
-        match self {
-            // . . . . .
-            // . x x x .
-            // . x # x .
-            // . x x x.
-            // . . . . .
-            Item::BombSmall => &[
-                (-1, 1),
-                (0, 1),
-                (1, 1),
-                (-1, 0),
-                (0, 0),
-                (1, 0),
-                (-1, -1),
-                (0, -1),
-                (1, -1),
-            ],
-
-            // . . x . .
-            // . x x x .
-            // x x # x x
-            // . x x x .
-            // . . x . .
-            Item::BombMedium => &[
-                (0, 2),
-                (-1, 1),
-                (0, 1),
-                (1, 1),
-                (-2, 0),
-                (-1, 0),
-                (0, 0),
-                (1, 0),
-                (2, 0),
-                (-1, -1),
-                (0, -1),
-                (1, -1),
-                (0, -2),
-            ],
-
-            // . . . x . . .
-            // . . x x x . .
-            // . x x x x x .
-            // x x x # x x x
-            // . x x x x x .
-            // . . x x x . .
-            // . . . x . . .
-            Item::BombLarge => &[
-                (0, 3),
-                (-1, 2),
-                (0, 2),
-                (1, 2),
-                (-2, 1),
-                (-1, 1),
-                (0, 1),
-                (1, 1),
-                (2, 1),
-                (-3, 0),
-                (-2, 0),
-                (-1, 0),
-                (0, 0),
-                (1, 0),
-                (2, 0),
-                (3, 0),
-                (-2, -1),
-                (-1, -1),
-                (0, -1),
-                (1, -1),
-                (2, -1),
-                (-1, -2),
-                (0, -2),
-                (1, -2),
-                (0, -3),
-            ],
-
-            // . . x . .
-            // . . x . .
-            // . . # . .
-            // . . x . .
-            // . . x . .
-            Item::BombVertical => &[
-                (0, 5),
-                (0, 4),
-                (0, 3),
-                (0, 2),
-                (0, 1),
-                (0, 0),
-                (0, -1),
-                (0, -2),
-                (0, -3),
-                (0, -4),
-                (0, -5),
-            ],
-
-            // . . . . .
-            // . . . . .
-            // x x # x x
-            // . . . . .
-            // . . . . .
-            Item::BombHorizontal => &[
-                (5, 0),
-                (4, 0),
-                (3, 0),
-                (2, 0),
-                (1, 0),
-                (0, 0),
-                (-1, 0),
-                (-2, 0),
-                (-3, 0),
-                (-4, 0),
-                (-5, 0),
-            ],
-
-            Item::Fire => &[(0, 0)],
-
-            // Eraser does not have an impact zone.
-            Item::Rock | Item::Gem | Item::Eraser => &[],
-        }
-    }
-}
-
-impl From<u8> for Item {
-    fn from(value: u8) -> Self {
-        match value {
-            0 => Item::BombSmall,
-            1 => Item::BombMedium,
-            2 => Item::BombLarge,
-            255 => Item::Eraser,
-            _ => panic!("Invalid item index"),
-        }
-    }
+#[derive(Debug, Clone, Copy, Event)]
+pub struct CreateObject {
+    pub parent_grid: Entity,
+    pub coord: GridCoord,
+    pub item: Item,
 }
 
 #[derive(Resource, Debug, Clone, Copy, Default)]
@@ -243,86 +99,111 @@ fn select_item<const I: u8>(_: Trigger<Pointer<Click>>, mut selected_item: ResMu
     }
 }
 
-#[derive(Resource, Asset, Clone, Reflect)]
-#[reflect(Resource)]
-pub struct ItemAssets {
-    #[dependency]
-    pub sprite_sheet: Handle<Image>,
-    // #[dependency]
-    // pub steps: Vec<Handle<AudioSource>>,
-    pub texture_atlas_layout: Handle<TextureAtlasLayout>,
-}
+// create item on grid click
+fn create_object(
+    trigger: Trigger<CreateObject>,
+    mut commands: Commands,
+    item_assets: Res<ItemAssets>,
+    mut object_map: ResMut<ObjectMap>,
+) {
+    let event = trigger.event();
+    println!("Creating object at coord: {:?}", event.coord);
+    println!("{:?}", &object_map.objects);
 
-impl FromWorld for ItemAssets {
-    fn from_world(world: &mut World) -> Self {
-        let texture_atlas_layout = {
-            let mut texture_atlas = world.resource_mut::<Assets<TextureAtlasLayout>>();
-            texture_atlas.add(TextureAtlasLayout::from_grid(
-                UVec2::splat(32),
-                4,
-                8,
-                None,
-                None,
-            ))
-        };
-        let assets = world.resource::<AssetServer>();
-        Self {
-            sprite_sheet: assets.load_with_settings(
-                "images/item_sprite_sheet.png",
-                |settings: &mut ImageLoaderSettings| {
-                    // Use `nearest` image sampling to preserve pixel art style.
-                    settings.sampler = ImageSampler::nearest();
+    if event.item == Item::Fire {
+        try_create_fire(event, &mut commands, item_assets, &mut object_map);
+        return;
+    }
+
+    if let Some((_, existing_entity)) = object_map.objects.remove(&event.coord) {
+        commands.entity(existing_entity).despawn();
+    }
+
+    if event.item == Item::Eraser {
+        return;
+    }
+
+    let entity = commands
+        .spawn((
+            Name::new("Item Object"),
+            GridCoord::clone(&event.coord),
+            Item::clone(&event.item),
+            ItemState::None,
+            Sprite::from_atlas_image(
+                item_assets.sprite_sheet.clone(),
+                TextureAtlas {
+                    layout: item_assets.texture_atlas_layout.clone(),
+                    index: event.item as usize,
                 },
             ),
-            // steps: vec![
-            //     assets.load("audio/sound_effects/step1.ogg"),
-            //     assets.load("audio/sound_effects/step2.ogg"),
-            //     assets.load("audio/sound_effects/step3.ogg"),
-            //     assets.load("audio/sound_effects/step4.ogg"),
-            // ],
-            texture_atlas_layout,
+            Transform::from_scale(Vec3::splat(2.0)),
+            StateScoped(Screen::Gameplay),
+        ))
+        .id();
+
+    commands.entity(event.parent_grid).add_child(entity);
+    object_map.objects.insert(event.coord, (event.item, entity));
+}
+
+fn try_create_fire(
+    event: &CreateObject,
+    commands: &mut Commands,
+    item_assets: Res<ItemAssets>,
+    object_map: &mut ResMut<ObjectMap>,
+) {
+    // if there is no bomb at the coordinate, do nothing
+    match object_map.objects.get(&event.coord) {
+        Some((item, _)) if item.is_bomb() => {}
+        _ => {
+            return;
+        }
+    }
+
+    if let Some((fire_coord, fire_entity)) = object_map.fire.take() {
+        commands.entity(fire_entity).despawn();
+        if fire_coord == event.coord {
+            println!("Fire already exists at this coordinate, skipping creation.");
+            return;
+        }
+    }
+    let entity = commands
+        .spawn((
+            Name::new("Fire Object"),
+            GridCoord::clone(&event.coord),
+            Item::Fire,
+            Sprite::from_atlas_image(
+                item_assets.sprite_sheet.clone(),
+                TextureAtlas {
+                    layout: item_assets.texture_atlas_layout.clone(),
+                    index: 5,
+                },
+            ),
+            Transform::from_scale(Vec3::splat(2.0)),
+            StateScoped(Screen::Gameplay),
+        ))
+        .id();
+    commands.entity(event.parent_grid).add_child(entity);
+    object_map.fire = Some((event.coord, entity));
+}
+
+fn reset_all_object_placements(
+    button_input: Res<ButtonInput<KeyCode>>,
+    mut commands: Commands,
+    mut object_map: ResMut<ObjectMap>,
+) {
+    if button_input.just_pressed(KeyCode::KeyR) {
+        for (_key, (_item, entity)) in object_map.objects.drain() {
+            commands.entity(entity).despawn();
         }
     }
 }
 
-#[derive(Resource, Asset, Clone, Reflect)]
-#[reflect(Resource)]
-pub struct BgAssets {
-    #[dependency]
-    pub sprite_sheet: Handle<Image>,
-    // #[dependency]
-    // pub steps: Vec<Handle<AudioSource>>,
-    pub texture_atlas_layout: Handle<TextureAtlasLayout>,
-}
-
-impl FromWorld for BgAssets {
-    fn from_world(world: &mut World) -> Self {
-        let texture_atlas_layout = {
-            let mut texture_atlas = world.resource_mut::<Assets<TextureAtlasLayout>>();
-            texture_atlas.add(TextureAtlasLayout::from_grid(
-                UVec2::splat(64),
-                4,
-                4,
-                None,
-                None,
-            ))
-        };
-        let assets = world.resource::<AssetServer>();
-        Self {
-            sprite_sheet: assets.load_with_settings(
-                "images/bg_sprite_sheet.png",
-                |settings: &mut ImageLoaderSettings| {
-                    // Use `nearest` image sampling to preserve pixel art style.
-                    settings.sampler = ImageSampler::nearest();
-                },
-            ),
-            // steps: vec![
-            //     assets.load("audio/sound_effects/step1.ogg"),
-            //     assets.load("audio/sound_effects/step2.ogg"),
-            //     assets.load("audio/sound_effects/step3.ogg"),
-            //     assets.load("audio/sound_effects/step4.ogg"),
-            // ],
-            texture_atlas_layout,
-        }
+fn run_simulation(
+    button_input: Res<ButtonInput<KeyCode>>,
+    mut next_state: ResMut<NextState<GamePhase>>,
+) {
+    if button_input.just_pressed(KeyCode::Space) {
+        println!("Running simulation...");
+        next_state.set(GamePhase::Run);
     }
 }

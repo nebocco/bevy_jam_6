@@ -7,17 +7,19 @@ use bevy::prelude::*;
 
 use crate::screens::Screen;
 
-mod level;
+mod init_level;
 mod result;
 mod run;
 mod setup;
 
-pub use level::CurrentLevel;
+pub use init_level::CurrentLevel;
+use init_level::{GridCoord, Item, ItemAssets, ItemState};
+use setup::ObjectMap;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_sub_state::<GamePhase>().add_plugins((
         setup::plugin,
-        level::plugin,
+        init_level::plugin,
         run::plugin,
         result::plugin,
     ));

@@ -1,18 +1,8 @@
 use std::{collections::HashMap, fmt::Debug};
 
-use bevy::{
-    color::palettes,
-    ecs::relationship::RelatedSpawnerCommands,
-    input::{ButtonState, keyboard::KeyboardInput},
-    prelude::*,
-    state::commands,
-};
+use bevy::{color::palettes, prelude::*};
 
-use crate::gameplay::{
-    GamePhase,
-    level::{GridCoord, ItemState, ObjectMap},
-    setup::{self, Item},
-};
+use crate::gameplay::{GamePhase, GridCoord, Item, ItemState, ObjectMap};
 
 pub(super) fn plugin(app: &mut App) {
     app.init_resource::<RunningState>()
@@ -25,7 +15,7 @@ pub(super) fn plugin(app: &mut App) {
 
 #[derive(Resource, Debug, Clone, PartialEq, Default)]
 pub struct RunningState {
-    object_map: HashMap<GridCoord, (setup::Item, Entity)>,
+    object_map: HashMap<GridCoord, (Item, Entity)>,
     tick: u32,
 }
 
@@ -50,7 +40,7 @@ fn init_run_state(
     running_state.object_map = object_map.objects.clone();
     running_state.tick = 0;
 
-    let (fire_coord, fire_item) = object_map.fire.expect("Fire item not found in object map");
+    let (fire_coord, _fire_entity) = object_map.fire.expect("Fire item not found in object map");
     let (burning_item, burning_item_entity) = object_map
         .objects
         .get(&fire_coord)
@@ -76,7 +66,7 @@ fn tick_timer(
 }
 
 fn tick_simulation(
-    trigger: Trigger<NextTick>,
+    _trigger: Trigger<NextTick>,
     // mut commands: Commands,
     mut color: Query<(&mut Sprite, &mut ItemState)>,
     mut running_state: ResMut<RunningState>,

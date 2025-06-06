@@ -1,16 +1,8 @@
 use std::fmt::Debug;
 
-use bevy::{
-    color::palettes,
-    ecs::relationship::RelatedSpawnerCommands,
-    input::{ButtonState, keyboard::KeyboardInput},
-    prelude::*,
-};
+use bevy::prelude::*;
 
-use crate::{
-    asset_tracking::LoadResource, audio::music, gameplay::CurrentLevel, menus::Menu,
-    screens::Screen, theme::widget,
-};
+use crate::{gameplay::CurrentLevel, screens::Screen, theme::widget};
 
 pub(super) fn plugin(app: &mut App) {
     app.init_resource::<ClearedLevels>()
