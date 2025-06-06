@@ -16,7 +16,7 @@ use crate::{
     audio::music,
     gameplay::{
         GamePhase,
-        setup::{CreateObject, SelectedItem},
+        edit::{CreateObject, SelectedItem},
     },
     screens::Screen,
 };
@@ -31,8 +31,8 @@ pub(super) fn plugin(app: &mut App) {
         .init_resource::<CurrentLevel>()
         .init_resource::<ObjectMap>();
     app.add_systems(
-        OnEnter(GamePhase::Setup),
-        (despawn_old_level, spawn_level).chain(),
+        OnEnter(GamePhase::Init),
+        (despawn_old_level, spawn_level, move_to_edit_phase).chain(),
     );
 }
 
@@ -41,8 +41,6 @@ pub(super) fn plugin(app: &mut App) {
 pub struct ItemAssets {
     #[dependency]
     pub sprite_sheet: Handle<Image>,
-    // #[dependency]
-    // pub steps: Vec<Handle<AudioSource>>,
     pub texture_atlas_layout: Handle<TextureAtlasLayout>,
 }
 
@@ -67,12 +65,6 @@ impl FromWorld for ItemAssets {
                     settings.sampler = ImageSampler::nearest();
                 },
             ),
-            // steps: vec![
-            //     assets.load("audio/sound_effects/step1.ogg"),
-            //     assets.load("audio/sound_effects/step2.ogg"),
-            //     assets.load("audio/sound_effects/step3.ogg"),
-            //     assets.load("audio/sound_effects/step4.ogg"),
-            // ],
             texture_atlas_layout,
         }
     }
@@ -83,8 +75,6 @@ impl FromWorld for ItemAssets {
 pub struct BgAssets {
     #[dependency]
     pub sprite_sheet: Handle<Image>,
-    // #[dependency]
-    // pub steps: Vec<Handle<AudioSource>>,
     pub texture_atlas_layout: Handle<TextureAtlasLayout>,
 }
 
@@ -109,12 +99,6 @@ impl FromWorld for BgAssets {
                     settings.sampler = ImageSampler::nearest();
                 },
             ),
-            // steps: vec![
-            //     assets.load("audio/sound_effects/step1.ogg"),
-            //     assets.load("audio/sound_effects/step2.ogg"),
-            //     assets.load("audio/sound_effects/step3.ogg"),
-            //     assets.load("audio/sound_effects/step4.ogg"),
-            // ],
             texture_atlas_layout,
         }
     }
@@ -155,6 +139,14 @@ impl AssetLoader for LevelLayoutLoader {
 
 #[derive(Component, Debug, Clone, Copy)]
 pub struct LevelBase;
+
+#[derive(Component, Debug, Clone, Copy, Default)]
+pub struct GridTile {
+    enable_interactions: bool,
+}
+
+#[derive(Component, Debug, Clone, Copy, Default)]
+pub struct GridTileTint;
 
 #[derive(Resource, Asset, Debug, Clone, Reflect)]
 #[reflect(Resource)]
@@ -403,7 +395,8 @@ fn spawn_level(
         ))
         .with_children(|parent| {
             spawn_grid(parent, bg_assets, item_assets, level_layout, object_map)
-        });
+        })
+        .observe(reset_tint_colors);
 }
 
 const CELL_SIZE_BASE: f32 = 32.0;
@@ -418,7 +411,7 @@ fn spawn_grid(
     commands
         .spawn((
             Name::new("Grid"),
-            Transform::from_xyz(-200., 0., 0.),
+            Transform::from_xyz(-80., 0., 0.),
             Visibility::default(),
             StateScoped(Screen::Gameplay),
         ))
@@ -455,6 +448,9 @@ fn spawn_grid_cell(
 
     let mut entity_builder = builder.spawn((
         Name::new(format!("Tile ({}, {})", x, y)),
+        GridTile {
+            enable_interactions: true,
+        },
         GridCoord { x, y },
         Transform::from_xyz(
             x as f32 * cell_size - x_offset,
@@ -469,6 +465,15 @@ fn spawn_grid_cell(
                 index: 0,
             },
         ),
+    ));
+
+    entity_builder.with_child((
+        Name::new("Grid Tile Tint"),
+        GridTileTint,
+        GridCoord { x, y },
+        Transform::from_xyz(0.0, 0.0, 3.0),
+        Sprite::from_color(Color::NONE, Vec2::splat(cell_size)),
+        StateScoped(Screen::Gameplay),
     ));
 
     if let Some(&item) = level_layout.objects.get(&GridCoord { x, y }) {
@@ -497,20 +502,23 @@ fn spawn_grid_cell(
                 .objects
                 .insert(GridCoord { x, y }, (item, item_entity));
         });
+
+        // gray out the tile sprite to indicate that interactions are disabled
+        entity_builder
+            .entry::<Sprite>()
+            .and_modify(|mut sprite| sprite.color = CELL_COLOR_DISABLED);
+        entity_builder.insert(GridTile {
+            enable_interactions: false,
+        });
     } else {
         // if there is no item at the coordinate, interactions are enabled
         entity_builder
             .observe(
-                move |over: Trigger<Pointer<Over>>, mut sprite: Query<&mut Sprite>| {
-                    let mut sprite = sprite.get_mut(over.target()).unwrap();
-                    sprite.color = Color::Srgba(palettes::basic::BLUE);
-                },
-            )
-            .observe(
-                move |out: Trigger<Pointer<Out>>, mut sprite: Query<&mut Sprite>| {
-                    let mut sprite = sprite.get_mut(out.target()).unwrap();
-                    sprite.color = Default::default();
-                },
+                // move |over: Trigger<Pointer<Over>>, mut sprite: Query<&mut Sprite>| {
+                //     let mut sprite = sprite.get_mut(over.target()).unwrap();
+                //     sprite.color = Color::Srgba(palettes::basic::BLUE);
+                // },
+                recolor_cells,
             )
             .observe(
                 |out: Trigger<Pointer<Pressed>>,
@@ -556,9 +564,69 @@ fn _recolor_on<E: Debug + Clone + Reflect>(
     }
 }
 
+fn recolor_cells(
+    over: Trigger<Pointer<Over>>,
+    selected_item: Res<SelectedItem>,
+    target_query: Query<(&GridCoord, &GridTile)>,
+    mut tint_query: Query<(&mut Sprite, &GridCoord), With<GridTileTint>>,
+) {
+    let Ok((target_coord, target_grid_tile)) = target_query.get(over.target()) else {
+        return;
+    };
+    let Some(item) = selected_item.0 else {
+        return;
+    };
+
+    let affected_coords: Vec<GridCoord> = item
+        .impact_zone()
+        .into_iter()
+        .map(|(dx, dy)| GridCoord {
+            x: target_coord.x.wrapping_add(*dx as u8),
+            y: target_coord.y.wrapping_add(*dy as u8),
+        })
+        .collect();
+
+    tint_query.iter_mut().for_each(|(mut sprite, grid_coord)| {
+        let color = if !target_grid_tile.enable_interactions {
+            CELL_COLOR_NORMAL
+        } else {
+            if grid_coord == target_coord {
+                CELL_COLOR_HOVERED.with_alpha(0.3)
+            } else if affected_coords.contains(grid_coord) {
+                CELL_COLOR_AFFECTED.with_alpha(0.3)
+            } else {
+                CELL_COLOR_NORMAL
+            }
+        };
+        sprite.color = color;
+    });
+}
+
+fn reset_tint_colors(
+    _out: Trigger<Pointer<Out>>,
+    mut tint_query: Query<&mut Sprite, With<GridTileTint>>,
+) {
+    for mut sprite in &mut tint_query {
+        sprite.color = CELL_COLOR_NORMAL;
+    }
+}
+
+const CELL_COLOR_NORMAL: Color = Color::NONE;
+const CELL_COLOR_DISABLED: Color = Color::Srgba(palettes::css::LIGHT_GRAY);
+const CELL_COLOR_HOVERED: Color = Color::Srgba(palettes::css::LIGHT_BLUE);
+const CELL_COLOR_AFFECTED: Color = Color::Srgba(palettes::css::LIGHT_YELLOW);
+
 #[derive(Component, Debug, Clone, Copy, PartialEq, Default)]
 pub enum ItemState {
     #[default]
     None,
     Burned,
+}
+
+fn move_to_edit_phase(
+    mut next_state: ResMut<NextState<GamePhase>>,
+    current_level: Res<CurrentLevel>,
+) {
+    println!("Moving to Edit phase for level {}", current_level.0);
+    next_state.set(GamePhase::Edit);
 }
