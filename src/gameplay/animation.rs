@@ -1,5 +1,6 @@
 use bevy::{
     color::palettes,
+    ecs::component::Mutable,
     image::{ImageLoaderSettings, ImageSampler},
     prelude::*,
 };
@@ -21,8 +22,16 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (
-            update_animation_timer.in_set(AppSystems::TickTimers),
-            update_animation_atlas.in_set(AppSystems::Update),
+            update_animation_timer::<ExplodeAnimation>.in_set(AppSystems::TickTimers),
+            update_animation_atlas::<ExplodeAnimation>.in_set(AppSystems::Update),
+        )
+            .in_set(PausableSystems),
+    )
+    .add_systems(
+        Update,
+        (
+            update_animation_timer::<FireAnimation>.in_set(AppSystems::TickTimers),
+            update_animation_atlas::<FireAnimation>.in_set(AppSystems::Update),
         )
             .in_set(PausableSystems),
     );
@@ -96,20 +105,26 @@ fn explode_object(entity_builder: &mut EntityCommands, item: Item, asset: &Explo
 }
 
 /// Update the animation timer.
-fn update_animation_timer(time: Res<Time>, mut query: Query<&mut ExplodeAnimation>) {
+fn update_animation_timer<D>(time: Res<Time>, mut query: Query<&mut D>)
+where
+    D: Animation + Component<Mutability = Mutable>,
+{
     for mut animation in &mut query {
         animation.update_timer(time.delta());
     }
 }
 
 /// Update the texture atlas to reflect changes in the animation.
-fn update_animation_atlas(mut query: Query<(&ExplodeAnimation, &mut Sprite, &mut Visibility)>) {
+fn update_animation_atlas<D>(mut query: Query<(&D, &mut Sprite, &mut Visibility)>)
+where
+    D: Animation + Component<Mutability = Mutable>,
+{
     for (animation, mut sprite, mut visibility) in &mut query {
         let Some(atlas) = sprite.texture_atlas.as_mut() else {
             continue;
         };
         if animation.changed() {
-            if animation.finished {
+            if animation.finished() {
                 *visibility = Visibility::Hidden; // Hide the sprite when the animation is finished.
             } else {
                 atlas.index = animation.get_atlas_index();
@@ -185,6 +200,16 @@ impl FromWorld for ExplosionAssets {
     }
 }
 
+trait Animation {
+    const FRAMES: usize;
+    const INTERVAL: Duration;
+
+    fn update_timer(&mut self, delta: Duration);
+    fn changed(&self) -> bool;
+    fn finished(&self) -> bool;
+    fn get_atlas_index(&self) -> usize;
+}
+
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 struct ExplodeAnimation {
@@ -194,9 +219,6 @@ struct ExplodeAnimation {
 }
 
 impl ExplodeAnimation {
-    const FRAMES: usize = 9;
-    const INTERVAL: Duration = Duration::from_millis(100);
-
     pub fn new() -> Self {
         Self {
             timer: Timer::new(Self::INTERVAL, TimerMode::Once),
@@ -204,8 +226,13 @@ impl ExplodeAnimation {
             finished: false,
         }
     }
+}
 
-    pub fn update_timer(&mut self, delta: Duration) {
+impl Animation for ExplodeAnimation {
+    const FRAMES: usize = 9;
+    const INTERVAL: Duration = Duration::from_millis(100);
+
+    fn update_timer(&mut self, delta: Duration) {
         if self.finished {
             return;
         }
@@ -220,11 +247,62 @@ impl ExplodeAnimation {
         }
     }
 
-    pub fn changed(&self) -> bool {
+    fn changed(&self) -> bool {
         self.timer.finished()
     }
 
-    pub fn get_atlas_index(&self) -> usize {
+    fn finished(&self) -> bool {
+        self.finished
+    }
+
+    fn get_atlas_index(&self) -> usize {
         self.frame
+    }
+}
+
+#[derive(Component, Reflect)]
+#[reflect(Component)]
+pub struct FireAnimation {
+    timer: Timer,
+    frame: usize,
+}
+
+impl FireAnimation {
+    pub fn new() -> Self {
+        Self {
+            timer: Timer::new(Self::INTERVAL, TimerMode::Repeating),
+            frame: 0,
+        }
+    }
+}
+
+impl Default for FireAnimation {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Animation for FireAnimation {
+    const FRAMES: usize = 2;
+    const INTERVAL: Duration = Duration::from_millis(400);
+
+    fn update_timer(&mut self, delta: Duration) {
+        self.timer.tick(delta);
+        if !self.timer.finished() {
+            return;
+        }
+        self.frame = (self.frame + 1) % Self::FRAMES;
+    }
+
+    fn changed(&self) -> bool {
+        self.timer.just_finished()
+    }
+
+    fn finished(&self) -> bool {
+        false
+    }
+
+    fn get_atlas_index(&self) -> usize {
+        self.frame + 5 // offset
     }
 }

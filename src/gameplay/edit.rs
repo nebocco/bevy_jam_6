@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     PausableSystems,
-    gameplay::{GamePhase, GridCoord, Item, ItemAssets, ItemState},
+    gameplay::{FireAnimation, GamePhase, GridCoord, Item, ItemAssets, ItemState},
     screens::Screen,
     theme::{UiAssets, widget},
 };
@@ -113,6 +113,7 @@ pub struct CreateFire {
 }
 
 #[derive(Component, Debug)]
+#[require(FireAnimation)]
 pub struct Fire;
 
 #[derive(Resource, Debug, Clone, Copy, Default)]
