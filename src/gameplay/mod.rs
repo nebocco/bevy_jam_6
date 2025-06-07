@@ -53,6 +53,7 @@ pub enum Item {
     BombLarge,
     BombHorizontal,
     BombVertical,
+    Null,
     Rock,
     Gem,
     Eraser,
@@ -78,10 +79,11 @@ impl Item {
             Item::BombLarge => 2,
             Item::BombHorizontal => 3,
             Item::BombVertical => 4,
-            Item::Eraser => 6,
+            Item::Null => 7,
             Item::Rock => 8,
             Item::Gem => 10,
             Item::Enemy => 11,
+            Item::Eraser => 12,
         }
     }
 }
@@ -222,7 +224,7 @@ impl Item {
 
             Item::Eraser => &[(0, 0)],
 
-            Item::Rock | Item::Gem | Item::Enemy => &[],
+            Item::Rock | Item::Gem | Item::Enemy | Item::Null => &[],
         }
     }
 }

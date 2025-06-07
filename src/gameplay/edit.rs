@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{image, prelude::*};
 
 use crate::{
     PausableSystems,
@@ -24,9 +24,15 @@ pub(super) fn plugin(app: &mut App) {
     .add_systems(OnEnter(GamePhase::Edit), init_edit_state)
     .add_systems(
         Update,
-        (reset_all_object_placements, run_simulation)
+        (reset_all_object_placements, run_simulation_with_keyboard)
             .run_if(in_state(GamePhase::Edit))
             .in_set(PausableSystems),
+    )
+    .add_systems(
+        Update,
+        highlight_selected_item
+            .run_if(in_state(GamePhase::Edit))
+            .run_if(resource_changed::<SelectedItem>),
     );
 }
 
@@ -46,42 +52,42 @@ fn spawn_item_buttons(
                     Handle::clone(&item_assets.sprite_sheet),
                     &ui_assets,
                     Handle::clone(&item_assets.texture_atlas_layout),
-                    0,
+                    Item::BombSmall,
                     select_item::<0>
                 ),
                 widget::item_button(
                     Handle::clone(&item_assets.sprite_sheet),
                     &ui_assets,
                     Handle::clone(&item_assets.texture_atlas_layout),
-                    1,
+                    Item::BombMedium,
                     select_item::<1>
                 ),
                 widget::item_button(
                     Handle::clone(&item_assets.sprite_sheet),
                     &ui_assets,
                     Handle::clone(&item_assets.texture_atlas_layout),
-                    2,
+                    Item::BombLarge,
                     select_item::<2>
                 ),
                 widget::item_button(
                     Handle::clone(&item_assets.sprite_sheet),
                     &ui_assets,
                     Handle::clone(&item_assets.texture_atlas_layout),
-                    3,
+                    Item::BombHorizontal,
                     select_item::<3>
                 ),
                 widget::item_button(
                     Handle::clone(&item_assets.sprite_sheet),
                     &ui_assets,
                     Handle::clone(&item_assets.texture_atlas_layout),
-                    4,
+                    Item::BombVertical,
                     select_item::<4>
                 ),
                 widget::item_button(
                     Handle::clone(&item_assets.sprite_sheet),
                     &ui_assets,
                     Handle::clone(&item_assets.texture_atlas_layout),
-                    12,
+                    Item::Eraser,
                     select_item::<255> // Eraser
                 ),
             ],
@@ -117,8 +123,8 @@ fn spawn_controlflow_buttons(mut commands: Commands, ui_assets: Res<UiAssets>) {
             ..Default::default()
         })
         .with_children(|parent| {
-            parent.spawn(widget::menu_button(&ui_assets));
-            parent.spawn(widget::run_button(&ui_assets));
+            // parent.spawn(widget::menu_button(&ui_assets));
+            parent.spawn(widget::run_button(&ui_assets, run_simulation_with_button));
         });
 }
 
@@ -158,6 +164,24 @@ fn select_item<const I: u8>(
     } else {
         println!("Selected item: {:?}", item);
         Some(item)
+    }
+}
+
+fn highlight_selected_item(
+    selected_item: Res<SelectedItem>,
+    query: Query<(&mut ImageNode, &Item), With<widget::ItemButton>>,
+) {
+    for (mut image_node, &item) in query {
+        image_node
+            .texture_atlas
+            .iter_mut()
+            .for_each(|texture_atlas| {
+                texture_atlas.index = if selected_item.0 == Some(item) {
+                    0 // Highlighted state
+                } else {
+                    1 // Normal state
+                };
+            });
     }
 }
 
@@ -259,18 +283,46 @@ fn reset_all_object_placements(
     }
 }
 
-fn run_simulation(
+fn run_simulation_with_keyboard(
     button_input: Res<ButtonInput<KeyCode>>,
+    fire_query: Query<Entity, With<Fire>>,
+    next_state: ResMut<NextState<GamePhase>>,
+) {
+    if button_input.just_pressed(KeyCode::Space) {
+        _try_run_simulation(fire_query, next_state);
+    }
+}
+
+fn run_simulation_with_button(
+    _trigger: Trigger<Pointer<Click>>,
+    state: Res<State<GamePhase>>,
+    fire_query: Query<Entity, With<Fire>>,
+    next_state: ResMut<NextState<GamePhase>>,
+) {
+    if *state.get() != GamePhase::Edit {
+        println!("Cannot run simulation, not in Edit phase.");
+        return;
+    }
+
+    _try_run_simulation(fire_query, next_state);
+}
+
+fn _try_run_simulation(
     fire_query: Query<Entity, With<Fire>>,
     mut next_state: ResMut<NextState<GamePhase>>,
 ) {
-    if button_input.just_pressed(KeyCode::Space) {
-        if fire_query.is_empty() {
-            println!("No fire objects found, cannot run simulation.");
-            return;
-        } else {
-            println!("Fire objects found, proceeding with simulation.");
-            next_state.set(GamePhase::Run);
-        }
+    if fire_query.is_empty() {
+        println!("No fire objects found, cannot run simulation.");
+        return;
+    } else {
+        println!("Fire objects found, proceeding with simulation.");
+        next_state.set(GamePhase::Run);
     }
+}
+
+fn open_pause_menu_with_button(
+    _trigger: Trigger<Pointer<Click>>,
+    mut next_state: ResMut<NextState<GamePhase>>,
+) {
+    next_state.set(GamePhase::Result);
 }

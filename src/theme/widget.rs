@@ -4,12 +4,13 @@ use std::borrow::Cow;
 
 use bevy::{
     color::palettes,
-    ecs::{spawn::SpawnWith, system::IntoObserverSystem},
+    ecs::{archetype::ArchetypeGeneration, spawn::SpawnWith, system::IntoObserverSystem},
     prelude::*,
     ui::Val::*,
 };
 
 use crate::{
+    gameplay::Item,
     screens::LevelStatus,
     theme::{
         UiAssets,
@@ -65,7 +66,7 @@ pub fn item_button<E, B, M, I>(
     image_handle: Handle<Image>,
     ui_assets: &UiAssets,
     layout: Handle<TextureAtlasLayout>,
-    index: usize,
+    item: Item,
     action: I,
 ) -> impl Bundle
 where
@@ -85,6 +86,7 @@ where
                     Name::new("Button Inner"),
                     Button,
                     ItemButton,
+                    item,
                     Node {
                         width: Px(80.0),
                         height: Px(80.0),
@@ -112,7 +114,13 @@ where
                     },
                     children![(
                         Name::new("Button Image"),
-                        ImageNode::from_atlas_image(image_handle, TextureAtlas { layout, index },),
+                        ImageNode::from_atlas_image(
+                            image_handle,
+                            TextureAtlas {
+                                layout,
+                                index: item.to_sprite_index(),
+                            },
+                        ),
                         Transform::from_xyz(0.0, 0.0, 0.1).with_scale(Vec2::splat(2.0).extend(1.0)),
                         Pickable::IGNORE,
                     )],
@@ -239,45 +247,56 @@ where
     )
 }
 
-pub fn run_button(ui_assets: &UiAssets) -> impl Bundle {
+pub fn run_button<E, B, M, I>(ui_assets: &UiAssets, action: I) -> impl Bundle
+where
+    E: Event,
+    B: Bundle,
+    I: IntoObserverSystem<E, B, M>,
+{
     let texture_handle = Handle::clone(&ui_assets.ui_texture);
     let layout = Handle::clone(&ui_assets.texture_atlas_layout);
+    let action = IntoObserverSystem::into_system(action);
     (
         Name::new("Button"),
         Node::default(),
         Children::spawn(SpawnWith(move |parent: &mut ChildSpawner| {
-            parent.spawn((
-                Name::new("Button Inner"),
-                Button,
-                Node {
-                    width: Px(96.0),
-                    height: Px(96.0),
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
-                    ..default()
-                },
-                ImageNode::from_atlas_image(
-                    Handle::clone(&texture_handle),
-                    TextureAtlas {
-                        layout: Handle::clone(&layout),
-                        index: 1,
+            parent
+                .spawn((
+                    Name::new("Button Inner"),
+                    Button,
+                    Node {
+                        width: Px(96.0),
+                        height: Px(96.0),
+                        align_items: AlignItems::Center,
+                        justify_content: JustifyContent::Center,
+                        ..default()
                     },
-                )
-                .with_mode(NodeImageMode::Sliced(TextureSlicer {
-                    border: BorderRect::all(8.0),
-                    center_scale_mode: SliceScaleMode::Stretch,
-                    sides_scale_mode: SliceScaleMode::Stretch,
-                    max_corner_scale: 4.0,
-                }))
-                .with_color(Color::Srgba(palettes::css::GRAY.with_alpha(0.5))),
-                children![(
-                    Name::new("Button Image"),
-                    ImageNode::from_atlas_image(texture_handle, TextureAtlas { layout, index: 4 },),
-                    Transform::from_xyz(0.0, 0.0, 0.1).with_scale(Vec2::splat(2.0).extend(1.0)),
-                    // Don't bubble picking events from the text up to the button.
-                    Pickable::IGNORE,
-                )],
-            ));
+                    ImageNode::from_atlas_image(
+                        Handle::clone(&texture_handle),
+                        TextureAtlas {
+                            layout: Handle::clone(&layout),
+                            index: 1,
+                        },
+                    )
+                    .with_mode(NodeImageMode::Sliced(TextureSlicer {
+                        border: BorderRect::all(8.0),
+                        center_scale_mode: SliceScaleMode::Stretch,
+                        sides_scale_mode: SliceScaleMode::Stretch,
+                        max_corner_scale: 4.0,
+                    }))
+                    .with_color(Color::Srgba(palettes::css::GRAY.with_alpha(0.5))),
+                    children![(
+                        Name::new("Button Image"),
+                        ImageNode::from_atlas_image(
+                            texture_handle,
+                            TextureAtlas { layout, index: 4 },
+                        ),
+                        Transform::from_xyz(0.0, 0.0, 0.1).with_scale(Vec2::splat(2.0).extend(1.0)),
+                        // Don't bubble picking events from the text up to the button.
+                        Pickable::IGNORE,
+                    )],
+                ))
+                .observe(action);
         })),
     )
 }
