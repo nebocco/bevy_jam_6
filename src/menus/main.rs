@@ -2,29 +2,34 @@
 
 use bevy::prelude::*;
 
-use crate::{asset_tracking::ResourceHandles, menus::Menu, screens::Screen, theme::widget};
+use crate::{
+    asset_tracking::ResourceHandles,
+    menus::Menu,
+    screens::Screen,
+    theme::{UiAssets, widget},
+};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Menu::Main), spawn_main_menu);
 }
 
-fn spawn_main_menu(mut commands: Commands) {
+fn spawn_main_menu(mut commands: Commands, ui_assets: Res<UiAssets>) {
     commands.spawn((
         widget::ui_root("Main Menu"),
         GlobalZIndex(2),
         StateScoped(Menu::Main),
         #[cfg(not(target_family = "wasm"))]
         children![
-            widget::button("Play", enter_loading_or_gameplay_screen),
-            widget::button("Settings", open_settings_menu),
-            widget::button("Credits", open_credits_menu),
-            widget::button("Exit", exit_app),
+            widget::text_button("Play", &ui_assets, enter_loading_or_gameplay_screen),
+            widget::text_button("Settings", &ui_assets, open_settings_menu),
+            widget::text_button("Credits", &ui_assets, open_credits_menu),
+            widget::text_button("Exit", &ui_assets, exit_app),
         ],
         #[cfg(target_family = "wasm")]
         children![
-            widget::button("Play", enter_loading_or_gameplay_screen),
-            widget::button("Settings", open_settings_menu),
-            widget::button("Credits", open_credits_menu),
+            widget::text_button("Play", &ui_assets, enter_loading_or_gameplay_screen),
+            widget::text_button("Settings", &ui_assets, open_settings_menu),
+            widget::text_button("Credits", &ui_assets, open_credits_menu),
         ],
     ));
 }

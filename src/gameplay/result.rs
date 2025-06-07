@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use crate::{
     gameplay::{CurrentLevel, GamePhase, Item, ItemState, LevelAssets, LevelLayout},
     screens::Screen,
-    theme::widget,
+    theme::{UiAssets, widget},
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -127,7 +127,7 @@ fn record_cleated_levels(
     };
 }
 
-fn init_result_state(mut commands: Commands, result: Res<GameResult>) {
+fn init_result_state(mut commands: Commands, result: Res<GameResult>, ui_assets: Res<UiAssets>) {
     // create UI node for graying out the whole screen
 
     let mut entity = commands.spawn((
@@ -140,14 +140,14 @@ fn init_result_state(mut commands: Commands, result: Res<GameResult>) {
     if result.is_cleared {
         entity.insert(children![
             widget::header("Level Cleared!"),
-            widget::button("Home", go_home),
-            widget::button("Next Level", next_level),
+            widget::text_button("Select Level", &ui_assets, go_level_select),
+            widget::text_button("Next Level", &ui_assets, next_level),
         ]);
     } else {
         entity.insert(children![
             widget::header("Level Failed..."),
-            widget::button("Home", go_home),
-            widget::button("Retry", retry_level),
+            widget::text_button("Home", &ui_assets, go_level_select),
+            widget::text_button("Retry", &ui_assets, retry_level),
         ]);
     }
 }
@@ -156,7 +156,7 @@ fn retry_level(_: Trigger<Pointer<Click>>, mut next_phase: ResMut<NextState<Game
     next_phase.set(GamePhase::Init);
 }
 
-fn go_home(_: Trigger<Pointer<Click>>, mut next_screen: ResMut<NextState<Screen>>) {
+fn go_level_select(_: Trigger<Pointer<Click>>, mut next_screen: ResMut<NextState<Screen>>) {
     next_screen.set(Screen::LevelSelect);
 }
 

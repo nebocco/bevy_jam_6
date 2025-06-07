@@ -233,6 +233,8 @@ impl From<u8> for Item {
             0 => Item::BombSmall,
             1 => Item::BombMedium,
             2 => Item::BombLarge,
+            3 => Item::BombHorizontal,
+            4 => Item::BombVertical,
             255 => Item::Eraser,
             _ => panic!("Invalid item index"),
         }
