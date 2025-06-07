@@ -4,7 +4,7 @@ use crate::{
     PausableSystems,
     gameplay::{GamePhase, GridCoord, Item, ItemAssets, ItemState},
     screens::Screen,
-    theme::widget,
+    theme::{UiAssets, widget},
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -14,9 +14,7 @@ pub(super) fn plugin(app: &mut App) {
 
     app.init_resource::<SelectedItem>();
 
-    app
-        // .add_event::<CreateObject>()
-        .add_observer(create_object)
+    app.add_observer(create_object)
         .add_observer(try_create_fire);
 
     app.add_systems(OnEnter(Screen::Gameplay), spawn_item_buttons)
@@ -29,7 +27,12 @@ pub(super) fn plugin(app: &mut App) {
         );
 }
 
-fn spawn_item_buttons(mut commands: Commands, item_assets: Res<ItemAssets>) {
+fn spawn_item_buttons(
+    mut commands: Commands,
+    item_assets: Res<ItemAssets>,
+    ui_assets: Res<UiAssets>,
+) {
+    let ui_assets = ui_assets.clone();
     commands
         .spawn((
             widget::ui_root("Item Buttons"),
@@ -38,30 +41,47 @@ fn spawn_item_buttons(mut commands: Commands, item_assets: Res<ItemAssets>) {
             children![
                 widget::item_button(
                     Handle::clone(&item_assets.sprite_sheet),
+                    &ui_assets,
                     Handle::clone(&item_assets.texture_atlas_layout),
                     0,
                     select_item::<0>
                 ),
                 widget::item_button(
                     Handle::clone(&item_assets.sprite_sheet),
+                    &ui_assets,
                     Handle::clone(&item_assets.texture_atlas_layout),
                     1,
                     select_item::<1>
                 ),
                 widget::item_button(
                     Handle::clone(&item_assets.sprite_sheet),
+                    &ui_assets,
                     Handle::clone(&item_assets.texture_atlas_layout),
                     2,
                     select_item::<2>
                 ),
                 widget::item_button(
                     Handle::clone(&item_assets.sprite_sheet),
+                    &ui_assets,
                     Handle::clone(&item_assets.texture_atlas_layout),
-                    7,
+                    3,
+                    select_item::<3>
+                ),
+                widget::item_button(
+                    Handle::clone(&item_assets.sprite_sheet),
+                    &ui_assets,
+                    Handle::clone(&item_assets.texture_atlas_layout),
+                    4,
+                    select_item::<4>
+                ),
+                widget::item_button(
+                    Handle::clone(&item_assets.sprite_sheet),
+                    &ui_assets,
+                    Handle::clone(&item_assets.texture_atlas_layout),
+                    12,
                     select_item::<255> // Eraser
                 ),
             ],
-            BackgroundColor(Color::WHITE),
         ))
         .insert(Node {
             position_type: PositionType::Absolute,
@@ -115,6 +135,7 @@ fn create_object(
     mut commands: Commands,
     item_assets: Res<ItemAssets>,
     query: Query<(Entity, &Item, &GridCoord)>,
+    mut selected_item: ResMut<SelectedItem>,
 ) {
     let event = trigger.event();
     println!("Creating object at coord: {:?}", event.coord);
@@ -149,6 +170,7 @@ fn create_object(
         .id();
 
     commands.entity(event.parent_grid).add_child(entity);
+    selected_item.0 = None;
 }
 
 fn try_create_fire(

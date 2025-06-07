@@ -232,7 +232,11 @@ fn spawn_grid(
     level_layout: &LevelLayout,
 ) {
     commands
-        .spawn((Name::new("Grid"), StateScoped(Screen::Gameplay)))
+        .spawn((
+            Name::new("Grid"),
+            Transform::from_xyz(0.0, 0.0, 0.5),
+            StateScoped(Screen::Gameplay),
+        ))
         .with_children(move |parent| {
             (0..level_layout.board_size.0).for_each(|x| {
                 (0..level_layout.board_size.1).for_each(|y| {
