@@ -1,7 +1,4 @@
-use bevy::{
-    ecs::{entity, spawn::SpawnWith},
-    prelude::*,
-};
+use bevy::{ecs::spawn::SpawnWith, prelude::*};
 
 use crate::{
     gameplay::{ClearedLevels, CurrentLevel, LevelAssets, move_to_level},
@@ -22,7 +19,6 @@ fn spawn_level_select_screen(
     commands.spawn((
         widget::ui_root("Level Select Screen"),
         StateScoped(Screen::LevelSelect),
-        BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.8)),
         GlobalZIndex(2),
         children![
             widget::label("Select Level"),

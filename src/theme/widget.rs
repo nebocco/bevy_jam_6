@@ -59,6 +59,7 @@ pub fn label(text: impl Into<String>) -> impl Bundle {
 
 pub fn item_button<E, B, M, I>(
     image_handle: Handle<Image>,
+    ui_assets: &UiAssets,
     layout: Handle<TextureAtlasLayout>,
     index: usize,
     action: I,
@@ -69,6 +70,8 @@ where
     I: IntoObserverSystem<E, B, M>,
 {
     let action = IntoObserverSystem::into_system(action);
+    let texture_handle = Handle::clone(&ui_assets.ui_texture);
+    let button_texture_layout = Handle::clone(&ui_assets.texture_atlas_layout);
     (
         Name::new("Button"),
         Node::default(),
@@ -77,18 +80,30 @@ where
                 .spawn((
                     Name::new("Button Inner"),
                     Button,
-                    BackgroundColor(BUTTON_BACKGROUND),
-                    InteractionPalette {
-                        none: BUTTON_BACKGROUND,
-                        hovered: BUTTON_HOVERED_BACKGROUND,
-                        pressed: BUTTON_PRESSED_BACKGROUND,
-                    },
                     Node {
                         width: Px(80.0),
                         height: Px(80.0),
                         align_items: AlignItems::Center,
                         justify_content: JustifyContent::Center,
                         ..default()
+                    },
+                    ImageNode::from_atlas_image(
+                        texture_handle,
+                        TextureAtlas {
+                            layout: button_texture_layout,
+                            index: 1,
+                        },
+                    )
+                    .with_mode(NodeImageMode::Sliced(TextureSlicer {
+                        border: BorderRect::all(8.0),
+                        center_scale_mode: SliceScaleMode::Stretch,
+                        sides_scale_mode: SliceScaleMode::Stretch,
+                        max_corner_scale: 2.0,
+                    })),
+                    InteractionImagePalette {
+                        none: Color::Srgba(palettes::css::WHITE),
+                        hovered: Color::Srgba(palettes::css::THISTLE),
+                        pressed: Color::Srgba(palettes::css::PLUM.with_alpha(0.5)),
                     },
                     children![(
                         Name::new("Button Image"),
@@ -126,6 +141,12 @@ pub fn level_button(index: usize, ui_assets: &UiAssets, level_status: LevelStatu
                         index: if level_status.is_cleared { 0 } else { 1 },
                     },
                 )
+                .with_mode(NodeImageMode::Sliced(TextureSlicer {
+                    border: BorderRect::all(8.0),
+                    center_scale_mode: SliceScaleMode::Stretch,
+                    sides_scale_mode: SliceScaleMode::Stretch,
+                    max_corner_scale: 2.0,
+                }))
                 .with_color(if level_status.is_locked {
                     Color::Srgba(palettes::css::GRAY.with_alpha(0.5))
                 } else {
@@ -148,8 +169,8 @@ pub fn level_button(index: usize, ui_assets: &UiAssets, level_status: LevelStatu
             if !level_status.is_locked {
                 entity_bundle.insert(InteractionImagePalette {
                     none: Color::Srgba(palettes::css::WHITE),
-                    hovered: Color::Srgba(palettes::css::LIGHT_BLUE),
-                    pressed: Color::Srgba(palettes::css::LIGHT_BLUE.with_alpha(0.5)),
+                    hovered: Color::Srgba(palettes::css::THISTLE),
+                    pressed: Color::Srgba(palettes::css::PLUM.with_alpha(0.5)),
                 });
             }
         })),

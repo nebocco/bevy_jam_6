@@ -17,3 +17,15 @@ pub const BUTTON_BACKGROUND: Color = Color::srgb(0.275, 0.400, 0.750);
 pub const BUTTON_HOVERED_BACKGROUND: Color = Color::srgb(0.384, 0.600, 0.820);
 /// #3d4999
 pub const BUTTON_PRESSED_BACKGROUND: Color = Color::srgb(0.239, 0.286, 0.600);
+
+/// #1a1a1d
+pub const MAIN_COLOR: Color = Color::srgb(0.102, 0.102, 0.114);
+
+/// #3b1c32
+pub const SUB_COLOR: Color = Color::srgb(0.231, 0.110, 0.196);
+
+/// #6a1e55
+pub const SUB_ACCENT_COLOR: Color = Color::srgb(0.416, 0.118, 0.337);
+
+/// #a64d79
+pub const ACCENT_COLOR: Color = Color::srgb(0.651, 0.302, 0.475);
