@@ -15,7 +15,7 @@ use crate::{
     asset_tracking::LoadResource,
     audio::music,
     gameplay::{
-        GamePhase,
+        GamePhase, GridCoord, Item,
         edit::{CreateFire, CreateObject, SelectedItem},
     },
     screens::Screen,
@@ -172,185 +172,6 @@ impl FromWorld for LevelAssets {
     }
 }
 
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize, Reflect)]
-pub struct GridCoord {
-    pub x: u8,
-    pub y: u8,
-}
-
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize, Reflect)]
-pub enum Item {
-    BombSmall,
-    BombMedium,
-    BombLarge,
-    BombHorizontal,
-    BombVertical,
-    Rock,
-    Gem,
-    Eraser,
-    Enemy,
-}
-
-impl Item {
-    pub fn is_bomb(&self) -> bool {
-        matches!(
-            self,
-            Item::BombSmall
-                | Item::BombMedium
-                | Item::BombLarge
-                | Item::BombHorizontal
-                | Item::BombVertical
-        )
-    }
-
-    pub const fn to_sprite_index(&self) -> usize {
-        match self {
-            Item::BombSmall => 0,
-            Item::BombMedium => 1,
-            Item::BombLarge => 2,
-            Item::BombHorizontal => 3,
-            Item::BombVertical => 4,
-            Item::Eraser => 6,
-            Item::Rock => 8,
-            Item::Gem => 10,
-            Item::Enemy => 11,
-        }
-    }
-}
-
-impl Item {
-    pub fn impact_zone(&self) -> &'static [(i8, i8)] {
-        match self {
-            // . . . . .
-            // . x x x .
-            // . x # x .
-            // . x x x.
-            // . . . . .
-            Item::BombSmall => &[
-                (-1, 1),
-                (0, 1),
-                (1, 1),
-                (-1, 0),
-                (0, 0),
-                (1, 0),
-                (-1, -1),
-                (0, -1),
-                (1, -1),
-            ],
-
-            // . . x . .
-            // . x x x .
-            // x x # x x
-            // . x x x .
-            // . . x . .
-            Item::BombMedium => &[
-                (0, 2),
-                (-1, 1),
-                (0, 1),
-                (1, 1),
-                (-2, 0),
-                (-1, 0),
-                (0, 0),
-                (1, 0),
-                (2, 0),
-                (-1, -1),
-                (0, -1),
-                (1, -1),
-                (0, -2),
-            ],
-
-            // . . . x . . .
-            // . . x x x . .
-            // . x x x x x .
-            // x x x # x x x
-            // . x x x x x .
-            // . . x x x . .
-            // . . . x . . .
-            Item::BombLarge => &[
-                (0, 3),
-                (-1, 2),
-                (0, 2),
-                (1, 2),
-                (-2, 1),
-                (-1, 1),
-                (0, 1),
-                (1, 1),
-                (2, 1),
-                (-3, 0),
-                (-2, 0),
-                (-1, 0),
-                (0, 0),
-                (1, 0),
-                (2, 0),
-                (3, 0),
-                (-2, -1),
-                (-1, -1),
-                (0, -1),
-                (1, -1),
-                (2, -1),
-                (-1, -2),
-                (0, -2),
-                (1, -2),
-                (0, -3),
-            ],
-
-            // . . x . .
-            // . . x . .
-            // . . # . .
-            // . . x . .
-            // . . x . .
-            Item::BombVertical => &[
-                (0, 5),
-                (0, 4),
-                (0, 3),
-                (0, 2),
-                (0, 1),
-                (0, 0),
-                (0, -1),
-                (0, -2),
-                (0, -3),
-                (0, -4),
-                (0, -5),
-            ],
-
-            // . . . . .
-            // . . . . .
-            // x x # x x
-            // . . . . .
-            // . . . . .
-            Item::BombHorizontal => &[
-                (5, 0),
-                (4, 0),
-                (3, 0),
-                (2, 0),
-                (1, 0),
-                (0, 0),
-                (-1, 0),
-                (-2, 0),
-                (-3, 0),
-                (-4, 0),
-                (-5, 0),
-            ],
-
-            Item::Eraser => &[(0, 0)],
-
-            Item::Rock | Item::Gem | Item::Enemy => &[],
-        }
-    }
-}
-
-impl From<u8> for Item {
-    fn from(value: u8) -> Self {
-        match value {
-            0 => Item::BombSmall,
-            1 => Item::BombMedium,
-            2 => Item::BombLarge,
-            255 => Item::Eraser,
-            _ => panic!("Invalid item index"),
-        }
-    }
-}
-
 fn despawn_old_level(
     mut commands: Commands,
     query: Query<Entity, With<LevelBase>>,
@@ -377,7 +198,7 @@ fn spawn_level(
         .get(&current_level.layout)
         .expect("Level layout not found");
 
-    let entity = commands
+    commands
         .spawn((
             Name::new("Level"),
             LevelBase,
@@ -512,7 +333,7 @@ fn spawn_grid_cell(
                     }
                     PointerButton::Secondary | _ => {
                         commands.trigger(CreateFire {
-                            parent_grid: entity,
+                            _parent_grid: entity,
                             coord,
                         });
                     }

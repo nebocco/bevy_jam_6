@@ -101,7 +101,7 @@ fn tick_simulation(
 
     let affected_area = compute_affected_area(&filtered_burning_stack);
 
-    let affected_items: Vec<_> = affected_area
+    let affected_objects: Vec<_> = affected_area
         .iter()
         .filter_map(|&(coord, _count)| {
             running_state
@@ -111,15 +111,27 @@ fn tick_simulation(
         })
         .collect();
 
+    let affected_items: Vec<_> = affected_objects
+        .iter()
+        .filter(|&&(_, item, _)| !item.is_bomb())
+        .cloned()
+        .collect();
+
+    let affected_bombs: Vec<_> = affected_objects
+        .into_iter()
+        .filter(|&(_, item, _)| item.is_bomb())
+        .collect();
+
+    // remove affected items from the object map
+    affected_items.iter().for_each(|(coord, _item, _entity)| {
+        running_state.object_map.remove(coord);
+    });
+
     // explode animation
     filtered_burning_stack
         .iter()
         .filter(|&(_, item, _)| item.is_bomb())
-        .chain(
-            affected_items
-                .iter()
-                .filter(|&(_, item, _)| !item.is_bomb()),
-        )
+        .chain(affected_items.iter())
         .for_each(|&(_coord, item, entity)| {
             let mut item_state = query.get_mut(entity).expect("Entity not found in query");
             *item_state = ItemState::Burned;
@@ -129,11 +141,8 @@ fn tick_simulation(
             });
         });
 
-    // preserve bombs in the burning stackz
-    burning_stack.0 = affected_items
-        .into_iter()
-        .filter(|&(_coord, item, _entity)| item.is_bomb())
-        .collect();
+    // preserve bombs in the burning stack
+    burning_stack.0 = affected_bombs;
 
     println!("next stack: {:?}", &burning_stack);
 }

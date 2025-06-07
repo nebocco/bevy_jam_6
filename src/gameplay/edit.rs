@@ -88,7 +88,7 @@ pub struct CreateObject {
 
 #[derive(Event, Debug, Clone)]
 pub struct CreateFire {
-    pub parent_grid: Entity,
+    pub _parent_grid: Entity,
     pub coord: GridCoord,
 }
 

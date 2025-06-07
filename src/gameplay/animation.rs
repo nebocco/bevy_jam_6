@@ -1,17 +1,14 @@
 use bevy::{
     color::palettes,
-    ecs::system::command,
     image::{ImageLoaderSettings, ImageSampler},
     prelude::*,
-    render::view::visibility,
 };
 use std::time::Duration;
 
 use crate::{
     AppSystems, PausableSystems,
     asset_tracking::LoadResource,
-    gameplay::{init_level::Item, run::Explode},
-    theme::palette,
+    gameplay::{Item, run::Explode},
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -35,73 +32,67 @@ pub fn explosion(trigger: Trigger<Explode>, mut commands: Commands, asset: Res<E
     let mut entity_builder = commands.entity(trigger.parent_entity);
 
     if trigger.item.is_bomb() {
-        // Make the exploded bomb red
-        entity_builder.entry::<Sprite>().and_modify(|mut sprite| {
-            sprite.color = Color::Srgba(palettes::css::RED.with_alpha(0.3));
-        });
-
-        // create explosion animation as a child
-        entity_builder.with_children(|parent| {
-            parent.spawn((
-                Name::new("Explosion Animation"),
-                Sprite::from_atlas_image(
-                    Handle::clone(&asset.explosion_image),
-                    TextureAtlas {
-                        layout: Handle::clone(&asset.texture_atlas_layout),
-                        index: 9, // dummy empty index
-                    },
-                ),
-                Transform::from_xyz(0.0, 0.0, 4.0).with_scale(Vec2::splat(3.0).extend(1.0)),
-                ExplodeAnimation::new(),
-            ));
-        });
-    } else if trigger.item == Item::Rock {
-        // change the sprite to a destroyed rock
-        entity_builder.entry::<Sprite>().and_modify(|mut sprite| {
-            sprite.texture_atlas.iter_mut().for_each(|atlas| {
-                atlas.index = 9;
-            });
-        });
-
-        // create destroyed rock animation as a child
-        entity_builder.with_children(|parent| {
-            parent.spawn((
-                Name::new("Destroyed Rock Animation"),
-                Sprite::from_atlas_image(
-                    Handle::clone(&asset.destroyed_image),
-                    TextureAtlas {
-                        layout: Handle::clone(&asset.texture_atlas_layout),
-                        index: 9, // dummy empty index
-                    },
-                ),
-                Transform::from_xyz(0.0, 0.0, 4.0).with_scale(Vec2::splat(2.0).extend(1.0)),
-                ExplodeAnimation::new(),
-            ));
-        });
-    } else if trigger.item == Item::Gem {
-        // change the sprite to a destroyed gem
-        entity_builder.entry::<Sprite>().and_modify(|mut sprite| {
-            sprite.texture_atlas.iter_mut().for_each(|atlas| {
-                atlas.index = 11;
-            });
-        });
-
-        // create destroyed gem animation as a child
-        entity_builder.with_children(|parent| {
-            parent.spawn((
-                Name::new("Destroyed Gem Animation"),
-                Sprite::from_atlas_image(
-                    Handle::clone(&asset.destroyed_image),
-                    TextureAtlas {
-                        layout: Handle::clone(&asset.texture_atlas_layout),
-                        index: 9, // dummy empty index
-                    },
-                ),
-                Transform::from_xyz(0.0, 0.0, 4.0).with_scale(Vec2::splat(2.0).extend(1.0)),
-                ExplodeAnimation::new(),
-            ));
-        });
+        explode_bomb(&mut entity_builder, &asset);
+    } else if trigger.item == Item::Rock || trigger.item == Item::Gem {
+        explode_object(&mut entity_builder, trigger.item, &asset);
+    } else {
+        warn!("Unexpected item type for explosion: {:?}", trigger.item);
+        return;
     }
+}
+
+fn explode_bomb(entity_builder: &mut EntityCommands, asset: &ExplosionAssets) {
+    // Make the exploded bomb red
+    entity_builder.entry::<Sprite>().and_modify(|mut sprite| {
+        sprite.color = Color::Srgba(palettes::css::RED.with_alpha(0.3));
+    });
+
+    // create explosion animation as a child
+    entity_builder.with_children(|parent| {
+        parent.spawn((
+            Name::new("Explosion Animation"),
+            Sprite::from_atlas_image(
+                Handle::clone(&asset.explosion_image),
+                TextureAtlas {
+                    layout: Handle::clone(&asset.texture_atlas_layout),
+                    index: 9, // dummy empty index
+                },
+            ),
+            Transform::from_xyz(0.0, 0.0, 4.0).with_scale(Vec2::splat(3.0).extend(1.0)),
+            ExplodeAnimation::new(),
+        ));
+    });
+}
+
+fn explode_object(entity_builder: &mut EntityCommands, item: Item, asset: &ExplosionAssets) {
+    // change the sprite to a destroyed item
+    entity_builder
+        .entry::<Sprite>()
+        .and_modify(move |mut sprite| {
+            sprite.texture_atlas.iter_mut().for_each(|atlas| {
+                atlas.index = match item {
+                    Item::Rock => 9, // index for destroyed rock
+                    Item::Gem => 11, // index for destroyed gem
+                    _ => unreachable!(),
+                };
+            });
+        });
+
+    // create destroyed item animation as a child
+    entity_builder.with_children(|parent| {
+        parent.spawn((
+            Name::new("Destroyed Item Animation"),
+            Sprite::from_atlas_image(
+                Handle::clone(&asset.destroyed_image),
+                TextureAtlas {
+                    layout: Handle::clone(&asset.texture_atlas_layout),
+                    index: 9, // dummy empty index
+                },
+            ),
+            Transform::from_xyz(0.0, 0.0, 4.0).with_scale(Vec2::splat(2.0).extend(1.0)),
+            ExplodeAnimation::new(),
+        ));
+    });
 }
 
 /// Update the animation timer.

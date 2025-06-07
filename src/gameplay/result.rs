@@ -3,10 +3,7 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 
 use crate::{
-    gameplay::{
-        CurrentLevel, GamePhase, LevelAssets,
-        init_level::{Item, ItemState, LevelLayout},
-    },
+    gameplay::{CurrentLevel, GamePhase, Item, ItemState, LevelAssets, LevelLayout},
     screens::Screen,
     theme::widget,
 };
