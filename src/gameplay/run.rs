@@ -1,8 +1,13 @@
 use std::{collections::HashMap, fmt::Debug};
 
-use bevy::prelude::*;
+use bevy::{color::palettes, prelude::*};
 
-use crate::gameplay::{GamePhase, GridCoord, Item, ItemState, edit::Fire};
+use crate::gameplay::{
+    GamePhase, GridCoord, Item, ItemState,
+    animation::AffectedTileAnimation,
+    edit::{CreateFire, Fire},
+    init_level::GridTile,
+};
 
 pub(super) fn plugin(app: &mut App) {
     app.init_resource::<RunningState>()
@@ -88,6 +93,7 @@ fn tick_simulation(
     mut running_state: ResMut<RunningState>,
     mut burning_stack: ResMut<BurningStack>,
     mut query: Query<&mut ItemState>,
+    mut tile_query: Query<(Entity, &GridCoord), With<GridTile>>,
 ) {
     running_state.tick += 1;
     println!("Tick: {}", running_state.tick);
@@ -100,6 +106,20 @@ fn tick_simulation(
     filtered_burning_stack.dedup_by_key(|(_, _, entity)| *entity);
 
     let affected_area = compute_affected_area(&filtered_burning_stack);
+
+    // set affected tile animation
+    for (tile_entity, coord) in &mut tile_query {
+        if affected_area.iter().any(|&(c, _)| c == *coord) {
+            commands.entity(tile_entity).with_children(|parent| {
+                parent.spawn((
+                    Name::new("Burning Tile Animation"),
+                    Sprite::from_color(palettes::css::RED, Vec2::splat(60.0)),
+                    AffectedTileAnimation::new(),
+                    Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
+                ));
+            });
+        }
+    }
 
     let affected_objects: Vec<_> = affected_area
         .iter()
@@ -140,6 +160,14 @@ fn tick_simulation(
                 parent_entity: entity,
             });
         });
+
+    // set fire animation for affected bombs
+    affected_bombs.iter().for_each(|&(coord, _item, entity)| {
+        commands.trigger(CreateFire {
+            _parent_grid: entity,
+            coord,
+        });
+    });
 
     // preserve bombs in the burning stack
     burning_stack.0 = affected_bombs;

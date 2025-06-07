@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use bevy::{
     color::palettes,
-    ecs::{spawn::SpawnWith, system::IntoObserverSystem},
+    ecs::{component, spawn::SpawnWith, system::IntoObserverSystem},
     prelude::*,
     ui::Val::*,
 };
@@ -57,6 +57,10 @@ pub fn label(text: impl Into<String>) -> impl Bundle {
     )
 }
 
+#[derive(Component, Reflect, Debug)]
+#[reflect(Component)]
+pub struct ItemButton;
+
 pub fn item_button<E, B, M, I>(
     image_handle: Handle<Image>,
     ui_assets: &UiAssets,
@@ -80,6 +84,7 @@ where
                 .spawn((
                     Name::new("Button Inner"),
                     Button,
+                    ItemButton,
                     Node {
                         width: Px(80.0),
                         height: Px(80.0),

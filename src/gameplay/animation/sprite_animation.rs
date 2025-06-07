@@ -107,7 +107,7 @@ fn explode_object(entity_builder: &mut EntityCommands, item: Item, asset: &Explo
 /// Update the animation timer.
 fn update_animation_timer<D>(time: Res<Time>, mut query: Query<&mut D>)
 where
-    D: Animation + Component<Mutability = Mutable>,
+    D: SpriteAnimation + Component<Mutability = Mutable>,
 {
     for mut animation in &mut query {
         animation.update_timer(time.delta());
@@ -117,7 +117,7 @@ where
 /// Update the texture atlas to reflect changes in the animation.
 fn update_animation_atlas<D>(mut query: Query<(&D, &mut Sprite, &mut Visibility)>)
 where
-    D: Animation + Component<Mutability = Mutable>,
+    D: SpriteAnimation + Component<Mutability = Mutable>,
 {
     for (animation, mut sprite, mut visibility) in &mut query {
         let Some(atlas) = sprite.texture_atlas.as_mut() else {
@@ -200,7 +200,7 @@ impl FromWorld for ExplosionAssets {
     }
 }
 
-trait Animation {
+trait SpriteAnimation {
     const FRAMES: usize;
     const INTERVAL: Duration;
 
@@ -228,7 +228,7 @@ impl ExplodeAnimation {
     }
 }
 
-impl Animation for ExplodeAnimation {
+impl SpriteAnimation for ExplodeAnimation {
     const FRAMES: usize = 9;
     const INTERVAL: Duration = Duration::from_millis(100);
 
@@ -282,7 +282,7 @@ impl Default for FireAnimation {
     }
 }
 
-impl Animation for FireAnimation {
+impl SpriteAnimation for FireAnimation {
     const FRAMES: usize = 2;
     const INTERVAL: Duration = Duration::from_millis(400);
 
