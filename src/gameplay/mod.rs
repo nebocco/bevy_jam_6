@@ -29,7 +29,7 @@ pub(super) fn plugin(app: &mut App) {
     ));
 }
 
-#[derive(SubStates, Clone, PartialEq, Eq, Hash, Debug, Default)]
+#[derive(SubStates, Clone, Copy, PartialEq, Eq, Hash, Debug, Default)]
 #[source(Screen = Screen::Gameplay)]
 #[states(scoped_entities)]
 pub enum GamePhase {

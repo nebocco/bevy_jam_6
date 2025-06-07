@@ -17,14 +17,17 @@ pub(super) fn plugin(app: &mut App) {
     app.add_observer(create_object)
         .add_observer(try_create_single_fire);
 
-    app.add_systems(OnEnter(Screen::Gameplay), spawn_item_buttons)
-        .add_systems(OnEnter(GamePhase::Edit), init_edit_state)
-        .add_systems(
-            Update,
-            (reset_all_object_placements, run_simulation)
-                .run_if(in_state(GamePhase::Edit))
-                .in_set(PausableSystems),
-        );
+    app.add_systems(
+        OnEnter(Screen::Gameplay),
+        (spawn_item_buttons, spawn_controlflow_buttons),
+    )
+    .add_systems(OnEnter(GamePhase::Edit), init_edit_state)
+    .add_systems(
+        Update,
+        (reset_all_object_placements, run_simulation)
+            .run_if(in_state(GamePhase::Edit))
+            .in_set(PausableSystems),
+    );
 }
 
 fn spawn_item_buttons(
@@ -95,6 +98,30 @@ fn spawn_item_buttons(
         });
 }
 
+fn spawn_controlflow_buttons(mut commands: Commands, ui_assets: Res<UiAssets>) {
+    commands
+        .spawn((
+            widget::ui_root("Control Flow Buttons"),
+            GlobalZIndex(0),
+            StateScoped(Screen::Gameplay),
+        ))
+        .insert(Node {
+            position_type: PositionType::Absolute,
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::SpaceBetween,
+            height: Val::Percent(80.0),
+            top: Val::Percent(10.0),
+            left: Val::Percent(10.0),
+            flex_direction: FlexDirection::Column,
+            row_gap: Val::Px(16.0),
+            ..Default::default()
+        })
+        .with_children(|parent| {
+            parent.spawn(widget::menu_button(&ui_assets));
+            parent.spawn(widget::run_button(&ui_assets));
+        });
+}
+
 fn init_edit_state(mut selected_item: ResMut<SelectedItem>) {
     selected_item.0 = None; // Reset selected item
 }
@@ -119,9 +146,13 @@ pub struct Fire;
 #[derive(Resource, Debug, Clone, Copy, Default)]
 pub(super) struct SelectedItem(pub Option<Item>);
 
-fn select_item<const I: u8>(_: Trigger<Pointer<Click>>, mut selected_item: ResMut<SelectedItem>) {
+fn select_item<const I: u8>(
+    _: Trigger<Pointer<Click>>,
+    mut selected_item: ResMut<SelectedItem>,
+    game_phase: Res<State<GamePhase>>,
+) {
     let item = Item::from(I);
-    selected_item.0 = if selected_item.0 == Some(item) {
+    selected_item.0 = if selected_item.0 == Some(item) || *game_phase.get() != GamePhase::Edit {
         println!("Deselecting item: {:?}", item);
         None
     } else {
@@ -136,7 +167,6 @@ fn create_object(
     mut commands: Commands,
     item_assets: Res<ItemAssets>,
     query: Query<(Entity, &Item, &GridCoord)>,
-    mut selected_item: ResMut<SelectedItem>,
 ) {
     let event = trigger.event();
     println!("Creating object at coord: {:?}", event.coord);
@@ -171,7 +201,6 @@ fn create_object(
         .id();
 
     commands.entity(event.parent_grid).add_child(entity);
-    selected_item.0 = None;
 }
 
 fn try_create_single_fire(
