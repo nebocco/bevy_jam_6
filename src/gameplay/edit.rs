@@ -2,7 +2,9 @@ use bevy::prelude::*;
 
 use crate::{
     PausableSystems,
-    gameplay::{FireAnimation, GamePhase, GridCoord, Item, ItemAssets, ItemState},
+    gameplay::{
+        FireAnimation, GamePhase, GridCoord, Item, ItemAssets, ItemState, init_level::LevelBase,
+    },
     screens::Screen,
     theme::{UiAssets, widget},
 };
@@ -18,7 +20,7 @@ pub(super) fn plugin(app: &mut App) {
     // .add_observer(try_create_single_fire);
 
     app.add_systems(
-        OnEnter(Screen::Gameplay),
+        OnEnter(GamePhase::Edit),
         (spawn_item_buttons, spawn_controlflow_buttons),
     )
     .add_systems(OnEnter(GamePhase::Edit), init_edit_state)
@@ -31,21 +33,27 @@ pub(super) fn plugin(app: &mut App) {
     .add_systems(
         Update,
         highlight_selected_item
-            .run_if(in_state(GamePhase::Edit))
-            .run_if(resource_changed::<SelectedItem>),
+            .run_if(in_state(GamePhase::Edit).and(resource_changed::<SelectedItem>)),
     );
 }
 
+#[derive(Component, Reflect, Debug)]
+#[reflect(Component)]
+pub struct LevelUIBase;
+
 fn spawn_item_buttons(
     mut commands: Commands,
+    // base_entity_query: Query<Entity, With<LevelBase>>,
     item_assets: Res<ItemAssets>,
     ui_assets: Res<UiAssets>,
 ) {
     let ui_assets = ui_assets.clone();
-    commands
+    let entity = commands
         .spawn((
             widget::ui_root("Item Buttons"),
             GlobalZIndex(0),
+            // LevelBase,
+            LevelUIBase,
             StateScoped(Screen::Gameplay),
             children![
                 widget::item_button(
@@ -101,14 +109,26 @@ fn spawn_item_buttons(
             row_gap: Val::Px(16.0),
             left: Val::Percent(80.0),
             ..Default::default()
-        });
+        })
+        .id();
+
+    // let base_entity = base_entity_query
+    //     .single()
+    //     .expect("Expected a single LevelBase entity");
+    // commands.entity(base_entity).add_child(entity);
 }
 
-fn spawn_controlflow_buttons(mut commands: Commands, ui_assets: Res<UiAssets>) {
-    commands
+fn spawn_controlflow_buttons(
+    mut commands: Commands,
+    ui_assets: Res<UiAssets>,
+    // base_entity_query: Query<Entity, With<LevelBase>>,
+) {
+    let entity = commands
         .spawn((
             widget::ui_root("Control Flow Buttons"),
             GlobalZIndex(0),
+            // LevelBase,
+            LevelUIBase,
             StateScoped(Screen::Gameplay),
         ))
         .insert(Node {
@@ -125,7 +145,13 @@ fn spawn_controlflow_buttons(mut commands: Commands, ui_assets: Res<UiAssets>) {
         .with_children(|parent| {
             // parent.spawn(widget::menu_button(&ui_assets));
             parent.spawn(widget::run_button(&ui_assets, run_simulation_with_button));
-        });
+        })
+        .id();
+
+    // let base_entity = base_entity_query
+    //     .single()
+    //     .expect("Expected a single LevelBase entity");
+    // commands.entity(base_entity).add_child(entity);
 }
 
 fn init_edit_state(mut selected_item: ResMut<SelectedItem>) {
@@ -270,7 +296,7 @@ pub fn fire(coord: GridCoord, item_assets: &ItemAssets) -> impl Bundle {
                 index: 5,
             },
         ),
-        Transform::from_translation(Vec3::new(0.0, 0.0, 2.0)),
+        Transform::from_translation(Vec3::new(2.0, 2.0, 0.1)),
         StateScoped(Screen::Gameplay),
     )
 }

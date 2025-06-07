@@ -159,7 +159,7 @@ pub fn level_button(index: usize, ui_assets: &UiAssets, level_status: LevelStatu
                     border: BorderRect::all(8.0),
                     center_scale_mode: SliceScaleMode::Stretch,
                     sides_scale_mode: SliceScaleMode::Stretch,
-                    max_corner_scale: 2.0,
+                    max_corner_scale: 4.0,
                 }))
                 .with_color(if level_status.is_locked {
                     Color::Srgba(palettes::css::GRAY.with_alpha(0.5))
@@ -247,6 +247,10 @@ where
     )
 }
 
+#[derive(Component, Reflect, Debug)]
+#[reflect(Component)]
+pub struct RunButton;
+
 pub fn run_button<E, B, M, I>(ui_assets: &UiAssets, action: I) -> impl Bundle
 where
     E: Event,
@@ -264,6 +268,7 @@ where
                 .spawn((
                     Name::new("Button Inner"),
                     Button,
+                    RunButton,
                     Node {
                         width: Px(96.0),
                         height: Px(96.0),
@@ -275,7 +280,7 @@ where
                         Handle::clone(&texture_handle),
                         TextureAtlas {
                             layout: Handle::clone(&layout),
-                            index: 1,
+                            index: 0,
                         },
                     )
                     .with_mode(NodeImageMode::Sliced(TextureSlicer {
@@ -283,8 +288,12 @@ where
                         center_scale_mode: SliceScaleMode::Stretch,
                         sides_scale_mode: SliceScaleMode::Stretch,
                         max_corner_scale: 4.0,
-                    }))
-                    .with_color(Color::Srgba(palettes::css::GRAY.with_alpha(0.5))),
+                    })),
+                    InteractionImagePalette {
+                        none: Color::Srgba(palettes::css::WHITE),
+                        hovered: Color::Srgba(palettes::css::THISTLE),
+                        pressed: Color::Srgba(palettes::css::PLUM.with_alpha(0.5)),
+                    },
                     children![(
                         Name::new("Button Image"),
                         ImageNode::from_atlas_image(

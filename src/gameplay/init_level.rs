@@ -16,7 +16,7 @@ use crate::{
     audio::music,
     gameplay::{
         GamePhase, GridCoord, Item,
-        edit::{CreateObject, SelectedItem, fire},
+        edit::{CreateObject, LevelUIBase, SelectedItem, fire},
     },
     screens::Screen,
 };
@@ -31,7 +31,11 @@ pub(super) fn plugin(app: &mut App) {
         .init_resource::<CurrentLevel>();
     app.add_systems(
         OnEnter(GamePhase::Init),
-        (despawn_old_level, spawn_level, move_to_edit_phase).chain(),
+        (despawn_old_level, spawn_level).chain(),
+    )
+    .add_systems(
+        PostUpdate,
+        move_to_edit_phase.run_if(in_state(GamePhase::Init)),
     );
 }
 
@@ -184,10 +188,11 @@ impl FromWorld for LevelAssets {
 
 fn despawn_old_level(
     mut commands: Commands,
-    query: Query<Entity, With<LevelBase>>,
+    query: Query<Entity, Or<(With<LevelBase>, With<LevelUIBase>)>>,
     mut selected_item: ResMut<SelectedItem>,
 ) {
     for entity in query.iter() {
+        println!("Despawning entity: {:?}", entity);
         commands.entity(entity).despawn();
     }
 
@@ -236,6 +241,7 @@ fn spawn_grid(
         .spawn((
             Name::new("Grid"),
             Transform::from_xyz(0.0, 0.0, 0.5),
+            Visibility::default(),
             StateScoped(Screen::Gameplay),
         ))
         .with_children(move |parent| {
@@ -273,6 +279,7 @@ fn spawn_grid_cell(
             y as f32 * cell_size - y_offset,
             0.0,
         ),
+        Visibility::default(),
         Pickable::default(),
         Sprite::from_atlas_image(
             bg_assets.sprite_sheet.clone(),
@@ -308,6 +315,7 @@ fn spawn_grid_cell(
                         index: item.to_sprite_index(),
                     },
                 ),
+                Visibility::default(),
                 Transform::from_scale(Vec3::splat(2.0)).with_translation(Vec3::new(0.0, 0.0, 1.0)),
                 StateScoped(Screen::Gameplay),
             ));

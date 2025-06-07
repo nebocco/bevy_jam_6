@@ -14,6 +14,7 @@ pub(super) fn plugin(app: &mut App) {
     );
 
     app.register_type::<GlobalVolumeLabel>();
+    app.init_resource::<SEVolume>();
     app.add_systems(
         Update,
         update_global_volume_label.run_if(in_state(Menu::Settings)),
@@ -90,6 +91,22 @@ fn lower_global_volume(_: Trigger<Pointer<Click>>, mut global_volume: ResMut<Glo
 fn raise_global_volume(_: Trigger<Pointer<Click>>, mut global_volume: ResMut<GlobalVolume>) {
     let linear = (global_volume.volume.to_linear() + 0.1).min(MAX_VOLUME);
     global_volume.volume = Volume::Linear(linear);
+}
+
+#[derive(Resource, Reflect, Debug, Default)]
+#[reflect(Resource)]
+struct SEVolume {
+    volume: Volume,
+}
+
+fn lower_se_volume(_: Trigger<Pointer<Click>>, mut se_volume: ResMut<SEVolume>) {
+    let linear = (se_volume.volume.to_linear() - 0.1).max(MIN_VOLUME);
+    se_volume.volume = Volume::Linear(linear);
+}
+
+fn raise_se_volume(_: Trigger<Pointer<Click>>, mut se_volume: ResMut<SEVolume>) {
+    let linear = (se_volume.volume.to_linear() + 0.1).min(MAX_VOLUME);
+    se_volume.volume = Volume::Linear(linear);
 }
 
 #[derive(Component, Reflect)]

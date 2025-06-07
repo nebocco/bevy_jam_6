@@ -9,7 +9,10 @@ use crate::{
         edit::{Fire, SelectedItem, fire},
         init_level::{GridTile, ItemAssets},
     },
-    theme::{interaction::InteractionImagePalette, widget::ItemButton},
+    theme::{
+        interaction::InteractionImagePalette,
+        widget::{ItemButton, RunButton},
+    },
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -79,10 +82,22 @@ fn disable_buttons(
     mut commands: Commands,
     mut selected_item: ResMut<SelectedItem>,
     mut item_buttons: Query<Entity, With<ItemButton>>,
+    mut run_buttons: Query<(&mut ImageNode, Entity), (With<RunButton>, Without<ItemButton>)>,
 ) {
     selected_item.0 = None; // Reset selected item
 
     for entity in item_buttons.iter_mut() {
+        commands.entity(entity).remove::<InteractionImagePalette>();
+    }
+
+    for (mut image_node, entity) in run_buttons.iter_mut() {
+        image_node
+            .texture_atlas
+            .iter_mut()
+            .for_each(|texture_atlas| {
+                texture_atlas.index = 1; // Set to gray
+            });
+        image_node.color = Color::WHITE;
         commands.entity(entity).remove::<InteractionImagePalette>();
     }
 }
