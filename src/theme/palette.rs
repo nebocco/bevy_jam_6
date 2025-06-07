@@ -8,6 +8,9 @@ pub const HEADER_TEXT: Color = Color::srgb(0.988, 0.984, 0.800);
 
 /// #ececec
 pub const BUTTON_TEXT: Color = Color::srgb(0.925, 0.925, 0.925);
+/// #adadad
+pub const BUTTON_TEXT_DISABLED: Color = Color::srgb(0.678, 0.678, 0.678);
+
 /// #4666bf
 pub const BUTTON_BACKGROUND: Color = Color::srgb(0.275, 0.400, 0.750);
 /// #6299d1

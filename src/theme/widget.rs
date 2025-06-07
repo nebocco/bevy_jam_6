@@ -10,7 +10,6 @@ use bevy::{
 };
 
 use crate::{
-    demo::level,
     screens::LevelStatus,
     theme::{
         UiAssets,
@@ -136,7 +135,11 @@ pub fn level_button(index: usize, ui_assets: &UiAssets, level_status: LevelStatu
                     Name::new("Button Text"),
                     Text(text),
                     TextFont::from_font_size(40.0),
-                    TextColor(BUTTON_TEXT),
+                    TextColor(if level_status.is_locked {
+                        BUTTON_TEXT_DISABLED
+                    } else {
+                        BUTTON_TEXT
+                    }),
                     // Don't bubble picking events from the text up to the button.
                     Pickable::IGNORE,
                 )],
