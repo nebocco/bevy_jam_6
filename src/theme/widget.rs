@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use bevy::{
     color::palettes,
-    ecs::{archetype::ArchetypeGeneration, spawn::SpawnWith, system::IntoObserverSystem},
+    ecs::{spawn::SpawnWith, system::IntoObserverSystem},
     prelude::*,
     ui::Val::*,
 };
