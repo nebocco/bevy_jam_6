@@ -16,7 +16,7 @@ use crate::{
     audio::music,
     gameplay::{
         GamePhase, GridCoord, Item,
-        edit::{CreateFire, CreateObject, SelectedItem},
+        edit::{CreateObject, SelectedItem, fire},
     },
     screens::Screen,
 };
@@ -122,6 +122,7 @@ pub struct CurrentLevel {
 pub struct LevelLayout {
     pub board_size: (u8, u8),
     pub objects: HashMap<GridCoord, Item>,
+    pub fire_coord: GridCoord,
 }
 
 #[derive(Default)]
@@ -259,12 +260,14 @@ fn spawn_grid_cell(
     let x_offset = (level_layout.board_size.0 as f32 - 1.0) * cell_size / 2.0;
     let y_offset = (level_layout.board_size.1 as f32 - 1.0) * cell_size / 2.0;
 
+    let grid_coord = GridCoord { x, y };
+
     let mut entity_builder = builder.spawn((
         Name::new(format!("Tile ({}, {})", x, y)),
         GridTile {
             enable_interactions: true,
         },
-        GridCoord { x, y },
+        grid_coord,
         Transform::from_xyz(
             x as f32 * cell_size - x_offset,
             y as f32 * cell_size - y_offset,
@@ -283,21 +286,21 @@ fn spawn_grid_cell(
     entity_builder.with_child((
         Name::new("Grid Tile Tint"),
         GridTileTint,
-        GridCoord { x, y },
+        grid_coord,
         Transform::from_xyz(0.0, 0.0, 3.0),
         Sprite::from_color(Color::NONE, Vec2::splat(cell_size)),
         StateScoped(Screen::Gameplay),
     ));
 
-    if let Some(&item) = level_layout.objects.get(&GridCoord { x, y }) {
+    if let Some(&item) = level_layout.objects.get(&grid_coord) {
         // if there is an item at the coordinate, disable interactions and spawn the item
         println!("Spawning item {:?} at ({}, {})", item, x, y);
 
         entity_builder.with_children(|parent| {
-            parent.spawn((
+            let mut item_entity = parent.spawn((
                 item,
                 ItemState::None,
-                GridCoord { x, y },
+                grid_coord,
                 Sprite::from_atlas_image(
                     item_assets.sprite_sheet.clone(),
                     TextureAtlas {
@@ -308,6 +311,11 @@ fn spawn_grid_cell(
                 Transform::from_scale(Vec3::splat(2.0)).with_translation(Vec3::new(0.0, 0.0, 1.0)),
                 StateScoped(Screen::Gameplay),
             ));
+
+            if level_layout.fire_coord == grid_coord {
+                // if the item is a fire, add a special component
+                item_entity.with_child(fire(level_layout.fire_coord, &item_assets));
+            }
         });
 
         // gray out the tile sprite to indicate that interactions are disabled
@@ -340,10 +348,10 @@ fn spawn_grid_cell(
                         });
                     }
                     PointerButton::Secondary | _ => {
-                        commands.trigger(CreateFire {
-                            _parent_grid: entity,
-                            coord,
-                        });
+                        // commands.trigger(CreateFire {
+                        //     _parent_grid: entity,
+                        //     coord,
+                        // });
                     }
                 };
                 println!("Creating object with item: {:?}", item);

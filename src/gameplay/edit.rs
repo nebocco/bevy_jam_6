@@ -1,4 +1,4 @@
-use bevy::{image, prelude::*};
+use bevy::prelude::*;
 
 use crate::{
     PausableSystems,
@@ -14,8 +14,8 @@ pub(super) fn plugin(app: &mut App) {
 
     app.init_resource::<SelectedItem>();
 
-    app.add_observer(create_object)
-        .add_observer(try_create_single_fire);
+    app.add_observer(create_object);
+    // .add_observer(try_create_single_fire);
 
     app.add_systems(
         OnEnter(Screen::Gameplay),
@@ -139,6 +139,7 @@ pub struct CreateObject {
     pub item: Item,
 }
 
+#[allow(dead_code)]
 #[derive(Event, Debug, Clone)]
 pub struct CreateFire {
     pub _parent_grid: Entity,
@@ -227,7 +228,7 @@ fn create_object(
     commands.entity(event.parent_grid).add_child(entity);
 }
 
-fn try_create_single_fire(
+fn _try_create_single_fire(
     trigger: Trigger<CreateFire>,
     mut commands: Commands,
     item_query: Query<(Entity, &Item, &GridCoord), Without<Fire>>,
@@ -318,11 +319,4 @@ fn _try_run_simulation(
         println!("Fire objects found, proceeding with simulation.");
         next_state.set(GamePhase::Run);
     }
-}
-
-fn open_pause_menu_with_button(
-    _trigger: Trigger<Pointer<Click>>,
-    mut next_state: ResMut<NextState<GamePhase>>,
-) {
-    next_state.set(GamePhase::Result);
 }
