@@ -14,7 +14,7 @@ mod init_level;
 mod result;
 mod run;
 
-pub use init_level::{CurrentLevel, LevelAssets};
+pub use init_level::{BgAssets, CurrentLevel, LevelAssets};
 use init_level::{ItemAssets, ItemState, LevelLayout};
 pub use result::{ClearedLevels, move_to_level};
 

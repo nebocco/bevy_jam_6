@@ -3,12 +3,21 @@
 use std::borrow::Cow;
 
 use bevy::{
+    color::palettes,
     ecs::{spawn::SpawnWith, system::IntoObserverSystem},
     prelude::*,
     ui::Val::*,
 };
 
-use crate::theme::{interaction::InteractionPalette, palette::*};
+use crate::{
+    demo::level,
+    screens::LevelStatus,
+    theme::{
+        UiAssets,
+        interaction::{InteractionImagePalette, InteractionPalette},
+        palette::*,
+    },
+};
 
 /// A root UI node that fills the window and centers its content.
 pub fn ui_root(name: impl Into<Cow<'static, str>>) -> impl Bundle {
@@ -89,6 +98,57 @@ where
                     )],
                 ))
                 .observe(action);
+        })),
+    )
+}
+
+pub fn level_button(index: usize, ui_assets: &UiAssets, level_status: LevelStatus) -> impl Bundle {
+    let text = index.to_string();
+    let texture_handle = Handle::clone(&ui_assets.ui_texture);
+    let layout = Handle::clone(&ui_assets.texture_atlas_layout);
+    (
+        Name::new("Button"),
+        Node::default(),
+        Children::spawn(SpawnWith(move |parent: &mut ChildSpawner| {
+            let mut entity_bundle = parent.spawn((
+                Name::new("Button Inner"),
+                Button,
+                Node {
+                    width: Px(96.0),
+                    height: Px(96.0),
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Center,
+                    ..default()
+                },
+                ImageNode::from_atlas_image(
+                    texture_handle,
+                    TextureAtlas {
+                        layout,
+                        index: if level_status.is_cleared { 0 } else { 1 },
+                    },
+                )
+                .with_color(if level_status.is_locked {
+                    Color::Srgba(palettes::css::GRAY.with_alpha(0.5))
+                } else {
+                    Color::Srgba(palettes::css::WHITE)
+                }),
+                children![(
+                    Name::new("Button Text"),
+                    Text(text),
+                    TextFont::from_font_size(40.0),
+                    TextColor(BUTTON_TEXT),
+                    // Don't bubble picking events from the text up to the button.
+                    Pickable::IGNORE,
+                )],
+            ));
+
+            if !level_status.is_locked {
+                entity_bundle.insert(InteractionImagePalette {
+                    none: Color::Srgba(palettes::css::WHITE),
+                    hovered: Color::Srgba(palettes::css::LIGHT_BLUE),
+                    pressed: Color::Srgba(palettes::css::LIGHT_BLUE.with_alpha(0.5)),
+                });
+            }
         })),
     )
 }

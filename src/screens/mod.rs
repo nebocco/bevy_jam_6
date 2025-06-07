@@ -7,6 +7,7 @@ mod splash;
 mod title;
 
 use bevy::prelude::*;
+pub use level_select::LevelStatus;
 
 pub(super) fn plugin(app: &mut App) {
     app.init_state::<Screen>();

@@ -74,6 +74,8 @@ impl FromWorld for ItemAssets {
 pub struct BgAssets {
     #[dependency]
     pub sprite_sheet: Handle<Image>,
+    #[dependency]
+    pub bg_image: Handle<Image>,
     pub texture_atlas_layout: Handle<TextureAtlasLayout>,
 }
 
@@ -93,6 +95,13 @@ impl FromWorld for BgAssets {
         Self {
             sprite_sheet: assets.load_with_settings(
                 "images/bg_sprite_sheet.png",
+                |settings: &mut ImageLoaderSettings| {
+                    // Use `nearest` image sampling to preserve pixel art style.
+                    settings.sampler = ImageSampler::nearest();
+                },
+            ),
+            bg_image: assets.load_with_settings(
+                "images/bg_image.png",
                 |settings: &mut ImageLoaderSettings| {
                     // Use `nearest` image sampling to preserve pixel art style.
                     settings.sampler = ImageSampler::nearest();
@@ -223,12 +232,7 @@ fn spawn_grid(
     level_layout: &LevelLayout,
 ) {
     commands
-        .spawn((
-            Name::new("Grid"),
-            Transform::from_xyz(-80., 0., 0.),
-            Visibility::default(),
-            StateScoped(Screen::Gameplay),
-        ))
+        .spawn((Name::new("Grid"), StateScoped(Screen::Gameplay)))
         .with_children(move |parent| {
             (0..level_layout.board_size.0).for_each(|x| {
                 (0..level_layout.board_size.1).for_each(|y| {

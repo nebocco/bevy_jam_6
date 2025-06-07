@@ -12,8 +12,53 @@ pub mod prelude {
     pub use super::{interaction::InteractionPalette, palette as ui_palette, widget};
 }
 
-use bevy::prelude::*;
+use bevy::{
+    image::{ImageLoaderSettings, ImageSampler},
+    prelude::*,
+};
+
+use crate::asset_tracking::LoadResource;
 
 pub(super) fn plugin(app: &mut App) {
+    app.load_resource::<UiAssets>();
     app.add_plugins(interaction::plugin);
+}
+
+#[derive(Resource, Asset, Clone, Reflect)]
+#[reflect(Resource)]
+pub struct UiAssets {
+    #[dependency]
+    ui_texture: Handle<Image>,
+    texture_atlas_layout: Handle<TextureAtlasLayout>,
+    #[dependency]
+    sound_effect: Handle<AudioSource>,
+}
+
+impl FromWorld for UiAssets {
+    fn from_world(world: &mut World) -> Self {
+        let texture_atlas_layout = {
+            let mut texture_atlas = world.resource_mut::<Assets<TextureAtlasLayout>>();
+            texture_atlas.add(TextureAtlasLayout::from_grid(
+                UVec2::splat(32),
+                4,
+                8,
+                None,
+                None,
+            ))
+        };
+
+        let assets = world.resource::<AssetServer>();
+
+        Self {
+            ui_texture: assets.load_with_settings(
+                "images/ui_sprite_sheet.png",
+                |settings: &mut ImageLoaderSettings| {
+                    // Use `nearest` image sampling to preserve pixel art style.
+                    settings.sampler = ImageSampler::nearest();
+                },
+            ),
+            texture_atlas_layout,
+            sound_effect: assets.load("audio/sound_effects/step1.ogg"),
+        }
+    }
 }
