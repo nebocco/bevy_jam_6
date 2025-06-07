@@ -15,7 +15,7 @@ pub(super) fn plugin(app: &mut App) {
     app.init_resource::<SelectedItem>();
 
     app.add_observer(create_object)
-        .add_observer(try_create_fire);
+        .add_observer(try_create_single_fire);
 
     app.add_systems(OnEnter(Screen::Gameplay), spawn_item_buttons)
         .add_systems(OnEnter(GamePhase::Edit), init_edit_state)
@@ -174,7 +174,7 @@ fn create_object(
     selected_item.0 = None;
 }
 
-fn try_create_fire(
+fn try_create_single_fire(
     trigger: Trigger<CreateFire>,
     mut commands: Commands,
     item_query: Query<(Entity, &Item, &GridCoord), Without<Fire>>,
@@ -199,9 +199,15 @@ fn try_create_fire(
         }
     }
 
-    commands.entity(parent_entity).with_child((
+    commands
+        .entity(parent_entity)
+        .with_child(fire(trigger.coord, &item_assets));
+}
+
+pub fn fire(coord: GridCoord, item_assets: &ItemAssets) -> impl Bundle {
+    (
         Name::new("Fire Object"),
-        GridCoord::clone(&trigger.coord),
+        coord,
         Fire,
         Sprite::from_atlas_image(
             item_assets.sprite_sheet.clone(),
@@ -212,7 +218,7 @@ fn try_create_fire(
         ),
         Transform::from_translation(Vec3::new(0.0, 0.0, 2.0)),
         StateScoped(Screen::Gameplay),
-    ));
+    )
 }
 
 fn reset_all_object_placements(

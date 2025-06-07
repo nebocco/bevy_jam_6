@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use bevy::{
     color::palettes,
-    ecs::{component, spawn::SpawnWith, system::IntoObserverSystem},
+    ecs::{spawn::SpawnWith, system::IntoObserverSystem},
     prelude::*,
     ui::Val::*,
 };
@@ -113,7 +113,7 @@ where
                     children![(
                         Name::new("Button Image"),
                         ImageNode::from_atlas_image(image_handle, TextureAtlas { layout, index },),
-                        Transform::from_scale(Vec2::splat(2.0).extend(1.0))
+                        Transform::from_xyz(0.0, 0.0, 0.1).with_scale(Vec2::splat(2.0).extend(1.0))
                     )],
                 ))
                 .observe(action);
@@ -207,7 +207,7 @@ where
                     Button,
                     Node {
                         width: Px(380.0),
-                        height: Px(80.0),
+                        height: Px(90.0),
                         align_items: AlignItems::Center,
                         justify_content: JustifyContent::Center,
                         ..default()
@@ -219,6 +219,11 @@ where
                             sides_scale_mode: SliceScaleMode::Stretch,
                             max_corner_scale: 4.0,
                         })),
+                    InteractionImagePalette {
+                        none: Color::Srgba(palettes::css::WHITE),
+                        hovered: Color::Srgba(palettes::css::THISTLE),
+                        pressed: Color::Srgba(palettes::css::PLUM.with_alpha(0.5)),
+                    },
                     children![(
                         Name::new("Button Text"),
                         Text(text),

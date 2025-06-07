@@ -2,18 +2,21 @@ use std::{collections::HashMap, fmt::Debug};
 
 use bevy::{color::palettes, prelude::*};
 
-use crate::gameplay::{
-    GamePhase, GridCoord, Item, ItemState,
-    animation::AffectedTileAnimation,
-    edit::{CreateFire, Fire},
-    init_level::GridTile,
+use crate::{
+    gameplay::{
+        GamePhase, GridCoord, Item, ItemState,
+        animation::AffectedTileAnimation,
+        edit::{Fire, SelectedItem, fire},
+        init_level::{GridTile, ItemAssets},
+    },
+    theme::{interaction::InteractionImagePalette, widget::ItemButton},
 };
 
 pub(super) fn plugin(app: &mut App) {
     app.init_resource::<RunningState>()
         .init_resource::<BurningStack>()
         .insert_resource(RunningTimer(Timer::from_seconds(1.0, TimerMode::Repeating)));
-    app.add_systems(OnEnter(GamePhase::Run), init_run_state)
+    app.add_systems(OnEnter(GamePhase::Run), (disable_buttons, init_run_state))
         .add_systems(Update, tick_timer.run_if(in_state(GamePhase::Run)))
         .add_observer(tick_simulation);
 }
@@ -58,6 +61,7 @@ fn init_run_state(
     let (_fire_entity, fire_coord) = fire_query
         .single()
         .expect("Fire item not found in object map");
+
     burning_stack.0 = running_state
         .object_map
         .iter()
@@ -69,6 +73,18 @@ fn init_run_state(
             }
         })
         .collect();
+}
+
+fn disable_buttons(
+    mut commands: Commands,
+    mut selected_item: ResMut<SelectedItem>,
+    mut item_buttons: Query<Entity, With<ItemButton>>,
+) {
+    selected_item.0 = None; // Reset selected item
+
+    for entity in item_buttons.iter_mut() {
+        commands.entity(entity).remove::<InteractionImagePalette>();
+    }
 }
 
 fn tick_timer(
@@ -90,6 +106,7 @@ fn tick_timer(
 fn tick_simulation(
     _trigger: Trigger<NextTick>,
     mut commands: Commands,
+    item_assets: Res<ItemAssets>,
     mut running_state: ResMut<RunningState>,
     mut burning_stack: ResMut<BurningStack>,
     mut query: Query<&mut ItemState>,
@@ -163,10 +180,9 @@ fn tick_simulation(
 
     // set fire animation for affected bombs
     affected_bombs.iter().for_each(|&(coord, _item, entity)| {
-        commands.trigger(CreateFire {
-            _parent_grid: entity,
-            coord,
-        });
+        commands
+            .entity(entity)
+            .with_child(fire(coord, &item_assets));
     });
 
     // preserve bombs in the burning stack

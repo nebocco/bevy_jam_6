@@ -1,7 +1,7 @@
 use bevy::{ecs::spawn::SpawnWith, prelude::*};
 
 use crate::{
-    gameplay::{ClearedLevels, CurrentLevel, LevelAssets, move_to_level},
+    gameplay::{ClearedLevels, CurrentLevel, GamePhase, LevelAssets, move_to_level},
     screens::Screen,
     theme::{UiAssets, widget},
 };
@@ -45,7 +45,7 @@ fn stage_select_button_grid(
         .enumerate()
         .map(|(index, _)| LevelStatus {
             is_cleared: cleared_levels.0.contains_key(&index),
-            is_locked: (0..index).any(|i| !cleared_levels.0.contains_key(&i)),
+            is_locked: (0..index).any(|i| !cleared_levels.0.contains_key(&i)) && false, // TODO: REMOVE !!!
         })
         .collect::<Vec<_>>();
 
@@ -69,8 +69,15 @@ fn stage_select_button_grid(
                         move |_out: Trigger<Pointer<Click>>,
                               level_assets: Res<LevelAssets>,
                               current_level: ResMut<CurrentLevel>,
+                              next_phase: ResMut<NextState<GamePhase>>,
                               next_screen: ResMut<NextState<Screen>>| {
-                            move_to_level(index, level_assets, current_level, next_screen);
+                            move_to_level(
+                                index,
+                                level_assets,
+                                current_level,
+                                next_phase,
+                                next_screen,
+                            );
                         },
                     );
                 }

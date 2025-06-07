@@ -164,12 +164,14 @@ fn next_level(
     _: Trigger<Pointer<Click>>,
     level_assets: Res<LevelAssets>,
     current_level: ResMut<CurrentLevel>,
+    next_phase: ResMut<NextState<GamePhase>>,
     next_screen: ResMut<NextState<Screen>>,
 ) {
     move_to_level(
         current_level.level + 1,
         level_assets,
         current_level,
+        next_phase,
         next_screen,
     );
 }
@@ -178,6 +180,7 @@ pub fn move_to_level(
     next_level: usize,
     level_assets: Res<LevelAssets>,
     mut current_level: ResMut<CurrentLevel>,
+    mut next_phase: ResMut<NextState<GamePhase>>,
     mut next_screen: ResMut<NextState<Screen>>,
 ) {
     info!("Moving to Level: {}", next_level);
@@ -185,6 +188,7 @@ pub fn move_to_level(
         current_level.level = next_level;
         current_level.layout = Handle::clone(level_handle);
         next_screen.set(Screen::Gameplay);
+        next_phase.set(GamePhase::Init);
     } else {
         warn!("Level {} does not exist", next_level);
         next_screen.set(Screen::LevelSelect);

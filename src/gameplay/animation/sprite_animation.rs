@@ -9,7 +9,7 @@ use std::time::Duration;
 use crate::{
     AppSystems, PausableSystems,
     asset_tracking::LoadResource,
-    gameplay::{Item, run::Explode},
+    gameplay::{Item, edit::Fire, run::Explode},
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -37,12 +37,16 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-pub fn explosion(trigger: Trigger<Explode>, mut commands: Commands, asset: Res<ExplosionAssets>) {
-    let mut entity_builder = commands.entity(trigger.parent_entity);
-
+pub fn explosion(
+    trigger: Trigger<Explode>,
+    mut commands: Commands,
+    asset: Res<ExplosionAssets>,
+    fire_query: Query<(Entity, &ChildOf), With<Fire>>,
+) {
     if trigger.item.is_bomb() {
-        explode_bomb(&mut entity_builder, &asset);
+        explode_bomb(&mut commands, trigger.parent_entity, &asset, fire_query);
     } else if trigger.item == Item::Rock || trigger.item == Item::Gem {
+        let mut entity_builder = commands.entity(trigger.parent_entity);
         explode_object(&mut entity_builder, trigger.item, &asset);
     } else {
         warn!("Unexpected item type for explosion: {:?}", trigger.item);
@@ -50,7 +54,22 @@ pub fn explosion(trigger: Trigger<Explode>, mut commands: Commands, asset: Res<E
     }
 }
 
-fn explode_bomb(entity_builder: &mut EntityCommands, asset: &ExplosionAssets) {
+fn explode_bomb(
+    commands: &mut Commands,
+    bomb_entity: Entity,
+    asset: &ExplosionAssets,
+    fire_query: Query<(Entity, &ChildOf), With<Fire>>,
+) {
+    // remove the fire
+    fire_query
+        .iter()
+        .filter(|(_, child)| child.parent() == bomb_entity)
+        .for_each(|(fire_entity, _)| {
+            commands.entity(fire_entity).despawn();
+        });
+
+    let mut entity_builder = commands.entity(bomb_entity);
+
     // Make the exploded bomb red
     entity_builder.entry::<Sprite>().and_modify(|mut sprite| {
         sprite.color = Color::Srgba(palettes::css::RED.with_alpha(0.3));
