@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     asset_tracking::LoadResource,
-    audio::{SEVolume, sound_effect},
+    audio::{SEVolume, SoundEffectAssets, sound_effect},
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -11,11 +11,6 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         (apply_interaction_palette, apply_interaction_image_palette),
     );
-
-    app.register_type::<InteractionAssets>();
-    app.load_resource::<InteractionAssets>();
-    app.add_observer(play_on_hover_sound_effect);
-    app.add_observer(play_on_click_sound_effect);
 }
 
 /// Palette for widget interactions. Add this to an entity that supports
@@ -45,54 +40,35 @@ fn apply_interaction_palette(
     }
 }
 
-#[derive(Resource, Asset, Clone, Reflect)]
-#[reflect(Resource)]
-struct InteractionAssets {
-    #[dependency]
-    hover: Handle<AudioSource>,
-    #[dependency]
-    click: Handle<AudioSource>,
-}
-
-impl FromWorld for InteractionAssets {
-    fn from_world(world: &mut World) -> Self {
-        let assets = world.resource::<AssetServer>();
-        Self {
-            hover: assets.load("audio/sound_effects/button_hover.ogg"),
-            click: assets.load("audio/sound_effects/button_click.ogg"),
-        }
-    }
-}
-
 fn play_on_hover_sound_effect(
     trigger: Trigger<Pointer<Over>>,
     mut commands: Commands,
-    interaction_assets: Option<Res<InteractionAssets>>,
+    se_assets: Option<Res<SoundEffectAssets>>,
     interaction_query: Query<(), With<Interaction>>,
     se_volume: Res<SEVolume>,
 ) {
-    let Some(interaction_assets) = interaction_assets else {
+    let Some(se_assets) = se_assets else {
         return;
     };
 
     if interaction_query.contains(trigger.target()) {
-        commands.spawn(sound_effect(interaction_assets.hover.clone(), &se_volume));
+        commands.spawn(sound_effect(se_assets.select_3.clone(), &se_volume));
     }
 }
 
 fn play_on_click_sound_effect(
     trigger: Trigger<Pointer<Click>>,
     mut commands: Commands,
-    interaction_assets: Option<Res<InteractionAssets>>,
+    se_assets: Option<Res<SoundEffectAssets>>,
     interaction_query: Query<(), With<Interaction>>,
     se_volume: Res<SEVolume>,
 ) {
-    let Some(interaction_assets) = interaction_assets else {
+    let Some(se_assets) = se_assets else {
         return;
     };
 
     if interaction_query.contains(trigger.target()) {
-        commands.spawn(sound_effect(interaction_assets.click.clone(), &se_volume));
+        commands.spawn(sound_effect(se_assets.select_2.clone(), &se_volume));
     }
 }
 

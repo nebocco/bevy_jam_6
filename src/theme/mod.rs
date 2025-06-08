@@ -30,8 +30,6 @@ pub struct UiAssets {
     #[dependency]
     ui_texture: Handle<Image>,
     texture_atlas_layout: Handle<TextureAtlasLayout>,
-    #[dependency]
-    sound_effect: Handle<AudioSource>,
 }
 
 impl FromWorld for UiAssets {
@@ -58,7 +56,6 @@ impl FromWorld for UiAssets {
                 },
             ),
             texture_atlas_layout,
-            sound_effect: assets.load("audio/sound_effects/step1.ogg"),
         }
     }
 }

@@ -10,6 +10,7 @@ use bevy::{
 };
 
 use crate::{
+    audio::SoundEffectAssets,
     gameplay::Item,
     screens::LevelStatus,
     theme::{

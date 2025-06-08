@@ -179,8 +179,6 @@ pub struct ExplosionAssets {
     #[dependency]
     destroyed_image: Handle<Image>,
     texture_atlas_layout: Handle<TextureAtlasLayout>,
-    #[dependency]
-    sound_effect: Handle<AudioSource>,
 }
 
 impl FromWorld for ExplosionAssets {
@@ -214,7 +212,6 @@ impl FromWorld for ExplosionAssets {
                 },
             ),
             texture_atlas_layout,
-            sound_effect: assets.load("audio/sound_effects/step1.ogg"),
         }
     }
 }
