@@ -75,3 +75,6 @@ codegen-units = 4
 
 [profile.ci.package."*"]
 opt-level = 0
+
+[workspace]
+members = ["generator"]
