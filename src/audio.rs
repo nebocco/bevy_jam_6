@@ -56,7 +56,7 @@ pub struct MusicVolume {
 }
 
 /// A music audio instance.
-pub fn music(handle: Handle<AudioSource>) -> impl Bundle {
+fn music(handle: Handle<AudioSource>) -> impl Bundle {
     (
         AudioPlayer(handle),
         PlaybackSettings {
@@ -102,12 +102,14 @@ fn fade_in(
     time: Res<Time>,
 ) {
     for (mut audio, entity) in audio_sink.iter_mut() {
+        println!("Fading in audio: {:?}", entity);
         let current_volume = audio.volume();
         audio.set_volume(
             current_volume
                 + Volume::Linear(music_volume.volume.to_linear() * time.delta_secs() / FADE_TIME),
         );
         if audio.volume().to_linear() >= music_volume.volume.to_linear() {
+            println!("Audio faded in: {:?}", entity);
             audio.set_volume(music_volume.volume);
             commands.entity(entity).remove::<FadeIn>();
         }
