@@ -284,7 +284,7 @@ fn spawn_level_ui_components(
         )],
     ));
 
-    let is_cleared = game_result.map_or(false, |result| result.is_cleared);
+    let is_cleared = game_result.is_some_and(|result| result.is_cleared);
 
     // missions section
     ui_base.with_children(|parent| {
@@ -319,8 +319,9 @@ fn spawn_level_ui_components(
                             "???".to_string()
                         }
                     ),
-                    game_result.map_or(false, |result| result.used_bomb_count
-                        <= level_layout.meta.min_bombs),
+                    game_result.is_some_and(|result| {
+                        result.used_bomb_count <= level_layout.meta.min_bombs
+                    }),
                     Handle::clone(&ui_assets.font),
                     Handle::clone(&ui_assets.ui_texture),
                     Handle::clone(&ui_assets.texture_atlas_layout),
@@ -335,8 +336,9 @@ fn spawn_level_ui_components(
                             "???".to_string()
                         }
                     ),
-                    game_result.map_or(false, |result| result.affected_cell_count
-                        <= level_layout.meta.min_affected_cells),
+                    game_result.is_some_and(|result| {
+                        result.affected_cell_count <= level_layout.meta.min_affected_cells
+                    }),
                     Handle::clone(&ui_assets.font),
                     Handle::clone(&ui_assets.ui_texture),
                     Handle::clone(&ui_assets.texture_atlas_layout),

@@ -214,7 +214,7 @@ pub fn level_button(index: usize, ui_assets: &UiAssets, level_status: &LevelStat
                                 level_status
                                     .best_result
                                     .as_ref()
-                                    .map_or(false, |result| result.mission_status[0]),
+                                    .is_some_and(|result| result.mission_status[0]),
                                 Handle::clone(&texture_handle),
                                 Handle::clone(&layout),
                             ),
@@ -222,7 +222,7 @@ pub fn level_button(index: usize, ui_assets: &UiAssets, level_status: &LevelStat
                                 level_status
                                     .best_result
                                     .as_ref()
-                                    .map_or(false, |result| result.mission_status[1]),
+                                    .is_some_and(|result| result.mission_status[1]),
                                 Handle::clone(&texture_handle),
                                 Handle::clone(&layout),
                             ),
@@ -230,7 +230,7 @@ pub fn level_button(index: usize, ui_assets: &UiAssets, level_status: &LevelStat
                                 level_status
                                     .best_result
                                     .as_ref()
-                                    .map_or(false, |result| result.mission_status[2]),
+                                    .is_some_and(|result| result.mission_status[2]),
                                 Handle::clone(&texture_handle),
                                 Handle::clone(&layout),
                             ),
