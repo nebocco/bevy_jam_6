@@ -8,5 +8,7 @@
     meta: (
         name: "Do Not Break Jewels",
         // message: Some("Do not break the Jewels."),
+        min_bombs: 200,
+        min_affected_cells: 200,
     )
 )

@@ -8,7 +8,9 @@
     },
     fire_coord: (x:2, y:1),
     meta: (
-        name: "Place Items",
+        name: Some("Place Items"),
         // message: Some("Select items from the right to place them."),
+        min_bombs: 200,
+        min_affected_cells: 200,
     )
 )
