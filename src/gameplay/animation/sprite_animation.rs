@@ -259,10 +259,9 @@ impl SpriteAnimation for ExplodeAnimation {
         if !self.timer.finished() {
             return;
         }
-        self.frame = self.frame + 1;
+        self.frame += 1;
         if self.frame >= Self::FRAMES {
             self.finished = true;
-            return;
         }
     }
 

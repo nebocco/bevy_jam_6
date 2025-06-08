@@ -320,7 +320,7 @@ fn spawn_grid_cell(
 
             if level_layout.fire_coord == grid_coord {
                 // if the item is a fire, add a special component
-                item_entity.with_child(fire(level_layout.fire_coord, &item_assets));
+                item_entity.with_child(fire(level_layout.fire_coord, item_assets));
             }
         });
 
@@ -338,28 +338,22 @@ fn spawn_grid_cell(
              coord: Query<&GridCoord>,
              selected_item: Res<SelectedItem>,
              mut commands: Commands| {
+                if out.button != PointerButton::Primary {
+                    return;
+                }
                 let entity = out.target();
                 let &coord = coord.get(entity).unwrap();
                 println!("Creating object at coord: {:?}", coord);
-                let item = match out.button {
-                    PointerButton::Primary => {
-                        let Some(item) = selected_item.0 else {
-                            println!("No item selected, skipping object creation.");
-                            return;
-                        };
-                        commands.trigger(CreateObject {
-                            parent_grid: entity,
-                            coord,
-                            item,
-                        });
-                    }
-                    PointerButton::Secondary | _ => {
-                        // commands.trigger(CreateFire {
-                        //     _parent_grid: entity,
-                        //     coord,
-                        // });
-                    }
+
+                let Some(item) = selected_item.0 else {
+                    println!("No item selected, skipping object creation.");
+                    return;
                 };
+                commands.trigger(CreateObject {
+                    parent_grid: entity,
+                    coord,
+                    item,
+                });
                 println!("Creating object with item: {:?}", item);
             },
         );
@@ -393,7 +387,7 @@ fn recolor_cells(
 
     let affected_coords: Vec<GridCoord> = item
         .impact_zone()
-        .into_iter()
+        .iter()
         .map(|(dx, dy)| GridCoord {
             x: target_coord.x.wrapping_add(*dx as u8),
             y: target_coord.y.wrapping_add(*dy as u8),
@@ -403,14 +397,12 @@ fn recolor_cells(
     tint_query.iter_mut().for_each(|(mut sprite, grid_coord)| {
         let color = if !target_grid_tile.enable_interactions {
             CELL_COLOR_NORMAL
+        } else if grid_coord == target_coord {
+            CELL_COLOR_HOVERED.with_alpha(0.3)
+        } else if affected_coords.contains(grid_coord) {
+            CELL_COLOR_AFFECTED.with_alpha(0.3)
         } else {
-            if grid_coord == target_coord {
-                CELL_COLOR_HOVERED.with_alpha(0.3)
-            } else if affected_coords.contains(grid_coord) {
-                CELL_COLOR_AFFECTED.with_alpha(0.3)
-            } else {
-                CELL_COLOR_NORMAL
-            }
+            CELL_COLOR_NORMAL
         };
         sprite.color = color;
     });

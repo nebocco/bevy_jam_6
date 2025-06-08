@@ -130,7 +130,7 @@ fn tick_simulation(
     println!("Burning stack: {:?}", &burning_stack);
     let mut filtered_burning_stack: Vec<_> = std::mem::take(&mut burning_stack.0)
         .into_iter()
-        .filter(|(coord, _item, _entity)| running_state.object_map.remove(&coord).is_some())
+        .filter(|(coord, _item, _entity)| running_state.object_map.remove(coord).is_some())
         .collect();
     filtered_burning_stack.sort_by_key(|(_, _, entity)| *entity);
     filtered_burning_stack.dedup_by_key(|(_, _, entity)| *entity);

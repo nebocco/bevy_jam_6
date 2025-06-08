@@ -316,7 +316,6 @@ fn _try_run_simulation(
 ) {
     if fire_query.is_empty() {
         println!("No fire objects found, cannot run simulation.");
-        return;
     } else {
         println!("Fire objects found, proceeding with simulation.");
         next_state.set(GamePhase::Run);

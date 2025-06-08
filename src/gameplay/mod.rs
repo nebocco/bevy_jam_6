@@ -72,7 +72,7 @@ impl Item {
         )
     }
 
-    pub const fn to_sprite_index(&self) -> usize {
+    pub const fn to_sprite_index(self) -> usize {
         match self {
             Item::BombSmall => 0,
             Item::BombMedium => 1,

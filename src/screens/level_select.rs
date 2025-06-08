@@ -55,7 +55,8 @@ fn stage_select_button_grid(
         .enumerate()
         .map(|(index, _)| LevelStatus {
             is_cleared: cleared_levels.0.contains_key(&index),
-            is_locked: (0..index).any(|i| !cleared_levels.0.contains_key(&i)) && false, // TODO: REMOVE !!!
+            // is_locked: (0..index).any(|i| !cleared_levels.0.contains_key(&i)) ,
+            is_locked: false, // TODO: REMOVE !!!
         })
         .collect::<Vec<_>>();
 
