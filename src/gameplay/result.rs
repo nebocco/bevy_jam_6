@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use bevy::prelude::*;
 
 use crate::{
-    audio::{self, SEVolume, SoundEffectAssets, sound_effect},
+    audio::{SEVolume, SoundEffectAssets, sound_effect, stop_music},
     gameplay::{CurrentLevel, GamePhase, GridCoord, Item, ItemState, LevelAssets, LevelLayout},
     screens::Screen,
     theme::{UiAssets, widget},
@@ -18,7 +18,7 @@ pub(super) fn plugin(app: &mut App) {
             compute_game_result,
             record_cleated_levels,
             init_result_state,
-            audio::stop_music,
+            stop_music,
         )
             .chain(),
     );

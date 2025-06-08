@@ -192,7 +192,7 @@ fn fade_out(
                     music_volume.volume.to_linear() * time.delta_secs() / FADE_OUT_TIME,
                 ),
         );
-        if audio.volume().to_linear() <= 0.0 {
+        if audio.volume().to_linear() <= 0.01 {
             commands.entity(entity).despawn();
         }
     }

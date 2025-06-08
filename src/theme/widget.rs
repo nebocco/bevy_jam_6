@@ -156,8 +156,8 @@ pub fn level_button(index: usize, ui_assets: &UiAssets, level_status: &LevelStat
                 Name::new("Button Inner"),
                 Button,
                 Node {
-                    width: Px(108.0),
-                    height: Px(108.0),
+                    width: Px(96.0),
+                    height: Px(96.0),
                     align_items: AlignItems::Center,
                     justify_content: JustifyContent::Center,
                     ..default()
@@ -205,67 +205,34 @@ pub fn level_button(index: usize, ui_assets: &UiAssets, level_status: &LevelStat
                             justify_content: JustifyContent::Center,
                             width: Percent(100.0),
                             bottom: Px(8.0),
-                            column_gap: Px(-6.0),
+                            column_gap: Px(-10.0),
                             ..default()
                         },
                         Transform::default(),
                         children![
-                            (
-                                Name::new("Star 1"),
-                                ImageNode::from_atlas_image(
-                                    Handle::clone(&texture_handle),
-                                    TextureAtlas {
-                                        layout: Handle::clone(&layout),
-                                        index: if level_status
-                                            .best_result
-                                            .as_ref()
-                                            .map_or(false, |result| result.mission_status[0])
-                                        {
-                                            7
-                                        } else {
-                                            6
-                                        },
-                                    },
-                                ),
-                                Transform::from_xyz(0.0, 0.0, 0.1),
+                            star(
+                                level_status
+                                    .best_result
+                                    .as_ref()
+                                    .map_or(false, |result| result.mission_status[0]),
+                                Handle::clone(&texture_handle),
+                                Handle::clone(&layout),
                             ),
-                            (
-                                Name::new("Star 2"),
-                                ImageNode::from_atlas_image(
-                                    Handle::clone(&texture_handle),
-                                    TextureAtlas {
-                                        layout: Handle::clone(&layout),
-                                        index: if level_status
-                                            .best_result
-                                            .as_ref()
-                                            .map_or(false, |result| result.mission_status[1])
-                                        {
-                                            7
-                                        } else {
-                                            6
-                                        },
-                                    },
-                                ),
-                                Transform::from_xyz(0.0, 0.0, 0.1),
+                            star(
+                                level_status
+                                    .best_result
+                                    .as_ref()
+                                    .map_or(false, |result| result.mission_status[1]),
+                                Handle::clone(&texture_handle),
+                                Handle::clone(&layout),
                             ),
-                            (
-                                Name::new("Star 3"),
-                                ImageNode::from_atlas_image(
-                                    Handle::clone(&texture_handle),
-                                    TextureAtlas {
-                                        layout: Handle::clone(&layout),
-                                        index: if level_status
-                                            .best_result
-                                            .as_ref()
-                                            .map_or(false, |result| result.mission_status[2])
-                                        {
-                                            7
-                                        } else {
-                                            6
-                                        },
-                                    },
-                                ),
-                                Transform::from_xyz(0.0, 0.0, 0.1),
+                            star(
+                                level_status
+                                    .best_result
+                                    .as_ref()
+                                    .map_or(false, |result| result.mission_status[2]),
+                                Handle::clone(&texture_handle),
+                                Handle::clone(&layout),
                             ),
                         ]
                     )
@@ -280,6 +247,25 @@ pub fn level_button(index: usize, ui_assets: &UiAssets, level_status: &LevelStat
                 });
             }
         })),
+    )
+}
+
+pub fn star(
+    is_lit: bool,
+    texture_handle: Handle<Image>,
+    layout: Handle<TextureAtlasLayout>,
+) -> impl Bundle {
+    (
+        Name::new("Star"),
+        Node::default(),
+        ImageNode::from_atlas_image(
+            texture_handle,
+            TextureAtlas {
+                layout,
+                index: if is_lit { 7 } else { 6 },
+            },
+        ),
+        Transform::from_xyz(0.0, 0.0, 0.1),
     )
 }
 

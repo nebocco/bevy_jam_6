@@ -28,8 +28,8 @@ pub(super) fn plugin(app: &mut App) {
 #[reflect(Resource)]
 pub struct UiAssets {
     #[dependency]
-    ui_texture: Handle<Image>,
-    texture_atlas_layout: Handle<TextureAtlasLayout>,
+    pub ui_texture: Handle<Image>,
+    pub texture_atlas_layout: Handle<TextureAtlasLayout>,
     #[dependency]
     pub font: Handle<Font>,
 }

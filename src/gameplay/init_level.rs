@@ -275,7 +275,11 @@ fn spawn_level_ui_components(
         StateScoped(Screen::Gameplay),
         Pickable::IGNORE,
         children![widget::header(
-            format!("Level {}: {}", current_level.level, level_layout.meta.name),
+            format!(
+                "Level {}: {}",
+                current_level.level + 1, // 1-indexed level display
+                level_layout.meta.name
+            ),
             Handle::clone(&ui_assets.font)
         )],
     ));
@@ -301,7 +305,9 @@ fn spawn_level_ui_components(
                 mission_line(
                     "Clear the stage",
                     is_cleared,
-                    Handle::clone(&ui_assets.font)
+                    Handle::clone(&ui_assets.font),
+                    Handle::clone(&ui_assets.ui_texture),
+                    Handle::clone(&ui_assets.texture_atlas_layout),
                 ),
                 // minimum_bombs
                 mission_line(
@@ -315,7 +321,9 @@ fn spawn_level_ui_components(
                     ),
                     game_result.map_or(false, |result| result.used_bomb_count
                         <= level_layout.meta.min_bombs),
-                    Handle::clone(&ui_assets.font)
+                    Handle::clone(&ui_assets.font),
+                    Handle::clone(&ui_assets.ui_texture),
+                    Handle::clone(&ui_assets.texture_atlas_layout),
                 ),
                 // minimum_affected_cells
                 mission_line(
@@ -329,30 +337,34 @@ fn spawn_level_ui_components(
                     ),
                     game_result.map_or(false, |result| result.affected_cell_count
                         <= level_layout.meta.min_affected_cells),
-                    Handle::clone(&ui_assets.font)
+                    Handle::clone(&ui_assets.font),
+                    Handle::clone(&ui_assets.ui_texture),
+                    Handle::clone(&ui_assets.texture_atlas_layout),
                 ),
             ],
         ));
     });
 }
 
-fn mission_line(text: &str, star_is_lit: bool, font: Handle<Font>) -> impl Bundle {
-    let _star_color = if star_is_lit {
-        palettes::css::GOLD
-    } else {
-        palettes::css::LIGHT_GRAY
-    };
+fn mission_line(
+    text: &str,
+    star_is_lit: bool,
+    font: Handle<Font>,
+    texture_handle: Handle<Image>,
+    layout_handle: Handle<TextureAtlasLayout>,
+) -> impl Bundle {
     (
         Node {
             display: Display::Flex,
             flex_direction: FlexDirection::Row,
-            align_items: AlignItems::Center,
+            align_items: AlignItems::FlexStart,
             justify_content: JustifyContent::FlexStart,
+            column_gap: Val::Px(8.0),
             ..Default::default()
         },
         Pickable::IGNORE,
         children![
-            // widget::icon("star", star_color, 16.0),
+            widget::star(star_is_lit, texture_handle, layout_handle),
             widget::text(text, font),
         ],
     )
