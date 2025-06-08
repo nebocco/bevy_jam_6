@@ -74,15 +74,20 @@ fn spawn_level_select_screen(
     cleared_levels: Res<ClearedLevels>,
     level_assets: Res<LevelAssets>,
 ) {
-    commands.spawn((
+    let mut entity = commands.spawn((
         widget::ui_root("Level Select Screen"),
         StateScoped(Screen::LevelSelect),
         GlobalZIndex(0),
         children![
-            widget::label("Select Level"),
-            stage_select_button_grid(ui_assets, cleared_levels, level_assets)
+            widget::header("Select Level"),
+            stage_select_button_grid(ui_assets, &cleared_levels, &level_assets)
         ],
     ));
+
+    // TODO: REMOVE !!!
+    if cleared_levels.0.len() == level_assets.levels.len() || cleared_levels.0.len() < 3 {
+        entity.with_child(widget::footer("All Levels Cleared!"));
+    }
 }
 
 fn spawn_music(mut commands: Commands, music_assets: Res<MusicAssets>) {
@@ -99,8 +104,8 @@ pub struct LevelStatus {
 
 fn stage_select_button_grid(
     ui_assets: Res<UiAssets>,
-    cleared_levels: Res<ClearedLevels>,
-    level_assets: Res<LevelAssets>,
+    cleared_levels: &ClearedLevels,
+    level_assets: &LevelAssets,
 ) -> impl Bundle {
     let ui_assets = ui_assets.clone();
     let level_status_list = level_assets

@@ -48,6 +48,16 @@ pub fn header(text: impl Into<String>) -> impl Bundle {
     )
 }
 
+/// A simple footer label. Bigger than [`label`].
+pub fn footer(text: impl Into<String>) -> impl Bundle {
+    (
+        Name::new("Header"),
+        Text(text.into()),
+        TextFont::from_font_size(40.0),
+        TextColor(HEADER_TEXT),
+    )
+}
+
 /// A simple text label.
 pub fn label(text: impl Into<String>) -> impl Bundle {
     (
@@ -55,6 +65,16 @@ pub fn label(text: impl Into<String>) -> impl Bundle {
         Text(text.into()),
         TextFont::from_font_size(24.0),
         TextColor(LABEL_TEXT),
+    )
+}
+
+/// A simple text.
+pub fn text(text: impl Into<String>) -> impl Bundle {
+    (
+        Name::new("Label"),
+        Text(text.into()),
+        TextFont::from_font_size(24.0),
+        TextColor(TEXT),
     )
 }
 

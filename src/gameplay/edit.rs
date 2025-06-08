@@ -64,13 +64,13 @@ fn spawn_item_buttons(
                     Item::BombMedium,
                     select_item::<1>
                 ),
-                widget::item_button(
-                    Handle::clone(&item_assets.sprite_sheet),
-                    &ui_assets,
-                    Handle::clone(&item_assets.texture_atlas_layout),
-                    Item::BombLarge,
-                    select_item::<2>
-                ),
+                // widget::item_button(
+                //     Handle::clone(&item_assets.sprite_sheet),
+                //     &ui_assets,
+                //     Handle::clone(&item_assets.texture_atlas_layout),
+                //     Item::BombLarge,
+                //     select_item::<2>
+                // ),
                 widget::item_button(
                     Handle::clone(&item_assets.sprite_sheet),
                     &ui_assets,
