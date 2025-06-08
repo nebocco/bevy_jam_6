@@ -15,6 +15,9 @@ Clear obstacles, collect jewels, and solve increasingly challenging puzzles.
 
 ## Credits & Licenses
 
+The source code of this project is available under the MIT License.
+Assets located in the `assets/` directory are subject to their respective licenses as listed below.
+
 ### Assets
 - Music: [Mystery Music Collection Pack 1](https://ansimuz.itch.io/mystery-music-collection-pack-1) by ansimuz
 - Effects: [Super Package Retro Pixel Effects 32x32 pack 2](https://bdragon1727.itch.io/super-package-retro-pixel-effects-32x32-pack-2) by Bdragon1727
