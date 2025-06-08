@@ -102,7 +102,7 @@ fn se_volume_widget(ui_assets: &UiAssets) -> impl Bundle {
             ..default()
         },
         children![
-            widget::button_small("-", &ui_assets, lower_se_volume),
+            widget::button_small("-", ui_assets, lower_se_volume),
             (
                 Name::new("Current SE Volume"),
                 Node {
