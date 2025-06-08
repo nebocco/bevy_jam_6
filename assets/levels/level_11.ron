@@ -21,9 +21,8 @@
     },
     fire_coord: (x:0, y:1),
     meta: (
-        name: "test",
-        // message: Some("Do not break the Jewels."),
-        min_bombs: 200,
-        min_affected_cells: 200,
+        name: "Runway",
+        min_bombs: 9,
+        min_affected_cells: 49,
     )
 )
