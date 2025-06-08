@@ -11,9 +11,9 @@
         (x:4, y:4): Rock,
         (x:3, y:3): Rock,
     },
-    fire_coord: (x:0, y:1),
+    fire_coord: (x:2, y:2),
     meta: (
-        name: Some("Brake All Rocks"),
+        name: "Break All Rocks",
         // message: Some("Break all the rocks."),
         min_bombs: 200,
         min_affected_cells: 200,

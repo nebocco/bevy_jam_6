@@ -10,8 +10,7 @@
     },
     fire_coord: (x:2, y:2),
     meta: (
-        name: Some("Space to Ignite"),
-        // message: Some("Press Space to ignite the bomb!"),
+        name: "Space to Ignite",
         min_bombs: 200,
         min_affected_cells: 200,
     )

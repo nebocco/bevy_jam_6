@@ -1,5 +1,5 @@
 (
-    board_size: (7, 5),
+    board_size: (7, 3),
     objects: {
         (x:1, y:1): Rock,
         (x:2, y:1): BombSmall,
@@ -8,8 +8,7 @@
     },
     fire_coord: (x:2, y:1),
     meta: (
-        name: Some("Place Items"),
-        // message: Some("Select items from the right to place them."),
+        name: "Place Items",
         min_bombs: 200,
         min_affected_cells: 200,
     )

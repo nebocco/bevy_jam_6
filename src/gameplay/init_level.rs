@@ -135,8 +135,7 @@ pub struct LevelLayout {
 
 #[derive(Debug, Clone, Reflect, Serialize, Deserialize)]
 pub struct LevelMetaData {
-    pub name: Option<String>,
-    pub message: Option<String>,
+    pub name: String,
     pub min_bombs: u8,
     pub min_affected_cells: u8,
 }
@@ -190,6 +189,11 @@ impl FromWorld for LevelAssets {
                 assets.load("levels/level_01.ron"),
                 assets.load("levels/level_02.ron"),
                 assets.load("levels/level_03.ron"),
+                assets.load("levels/level_04.ron"),
+                assets.load("levels/level_05.ron"),
+                assets.load("levels/level_06.ron"),
+                assets.load("levels/level_07.ron"),
+                assets.load("levels/level_08.ron"),
             ],
         }
     }
@@ -271,11 +275,7 @@ fn spawn_level_ui_components(
         StateScoped(Screen::Gameplay),
         Pickable::IGNORE,
         children![widget::header(
-            if let Some(name) = &level_layout.meta.name {
-                format!("Level {}: {}", current_level.level, name)
-            } else {
-                format!("Level {}", current_level.level)
-            },
+            format!("Level {}: {}", current_level.level, level_layout.meta.name),
             Handle::clone(&ui_assets.font)
         )],
     ));

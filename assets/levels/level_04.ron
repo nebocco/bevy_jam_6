@@ -1,13 +1,20 @@
 (
-    board_size: (5, 9),
+    board_size: (5, 5),
     objects: {
-        (x:0, y:1): BombSmall,
-        (x:1, y:4): BombMedium
+        (x:0, y:0): BombSmall,
+        (x:1, y:1): Rock,
+        (x:4, y:0): BombSmall,
+        (x:3, y:1): Rock,
+        (x:2, y:2): BombSmall,
+        (x:0, y:4): BombSmall,
+        (x:1, y:3): Rock,
+        (x:4, y:4): BombSmall,
+        (x:3, y:3): Rock,
     },
-    fire_coord: (x:0, y:1),
+    fire_coord: (x:2, y:2),
     meta: (
-        name: "Do Not Break Jewels",
-        // message: Some("Do not break the Jewels."),
+        name: "Blast All Bombs",
+        // message: Some("Break all the rocks."),
         min_bombs: 200,
         min_affected_cells: 200,
     )
