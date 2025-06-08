@@ -28,8 +28,10 @@ pub(super) fn plugin(app: &mut App) {
 #[reflect(Resource)]
 pub struct UiAssets {
     #[dependency]
-    ui_texture: Handle<Image>,
-    texture_atlas_layout: Handle<TextureAtlasLayout>,
+    pub ui_texture: Handle<Image>,
+    pub texture_atlas_layout: Handle<TextureAtlasLayout>,
+    #[dependency]
+    pub font: Handle<Font>,
 }
 
 impl FromWorld for UiAssets {
@@ -56,6 +58,7 @@ impl FromWorld for UiAssets {
                 },
             ),
             texture_atlas_layout,
+            font: assets.load("fonts/m6x11.ttf"),
         }
     }
 }

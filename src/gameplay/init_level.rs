@@ -14,10 +14,14 @@ use serde::{Deserialize, Serialize};
 use crate::{
     asset_tracking::LoadResource,
     gameplay::{
-        GamePhase, GridCoord, Item,
+        ClearedLevels, GamePhase, GridCoord, Item,
         edit::{CreateObject, SelectedItem, fire},
     },
     screens::Screen,
+    theme::{
+        UiAssets,
+        widget::{self},
+    },
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -30,7 +34,7 @@ pub(super) fn plugin(app: &mut App) {
         .init_resource::<CurrentLevel>();
     app.add_systems(
         OnEnter(GamePhase::Init),
-        (despawn_old_level, spawn_level).chain(),
+        (despawn_old_level, (spawn_level, spawn_level_ui_components)).chain(),
     )
     .add_systems(
         PostUpdate,
@@ -131,8 +135,9 @@ pub struct LevelLayout {
 
 #[derive(Debug, Clone, Reflect, Serialize, Deserialize)]
 pub struct LevelMetaData {
-    pub name: Option<String>,
-    pub description: Option<String>,
+    pub name: String,
+    pub min_bombs: u8,
+    pub min_affected_cells: u8,
 }
 
 #[derive(Default)]
@@ -184,6 +189,11 @@ impl FromWorld for LevelAssets {
                 assets.load("levels/level_01.ron"),
                 assets.load("levels/level_02.ron"),
                 assets.load("levels/level_03.ron"),
+                assets.load("levels/level_04.ron"),
+                assets.load("levels/level_05.ron"),
+                assets.load("levels/level_06.ron"),
+                assets.load("levels/level_07.ron"),
+                assets.load("levels/level_08.ron"),
             ],
         }
     }
@@ -195,7 +205,6 @@ fn despawn_old_level(
     mut selected_item: ResMut<SelectedItem>,
 ) {
     for entity in query.iter() {
-        println!("Despawning entity: {:?}", entity);
         commands.entity(entity).despawn();
     }
 
@@ -225,6 +234,142 @@ fn spawn_level(
         ))
         .with_children(|parent| spawn_grid(parent, bg_assets, item_assets, level_layout))
         .observe(reset_tint_colors_on_out);
+}
+
+fn spawn_level_ui_components(
+    mut commands: Commands,
+    ui_assets: Res<UiAssets>,
+    level_layouts: Res<Assets<LevelLayout>>,
+    cleared_levels: Res<ClearedLevels>,
+    current_level: Res<CurrentLevel>,
+) {
+    let level_layout = level_layouts
+        .get(&current_level.layout)
+        .expect("Level layout not found");
+
+    let game_result = cleared_levels.0.get(&current_level.level);
+
+    let mut ui_base = commands.spawn((
+        Name::new("Level UI"),
+        Node {
+            position_type: PositionType::Absolute,
+            display: Display::Flex,
+            flex_direction: FlexDirection::Column,
+            justify_content: JustifyContent::FlexStart,
+            align_items: AlignItems::FlexStart,
+            left: Val::Px(48.0),
+            top: Val::Px(48.0),
+            row_gap: Val::Px(24.0),
+            ..Default::default()
+        },
+        LevelBase,
+        Pickable::IGNORE,
+    ));
+
+    // level name
+    ui_base.with_child((
+        Node {
+            display: Display::Flex,
+            ..Default::default()
+        },
+        StateScoped(Screen::Gameplay),
+        Pickable::IGNORE,
+        children![widget::header(
+            format!(
+                "Level {}: {}",
+                current_level.level + 1, // 1-indexed level display
+                level_layout.meta.name
+            ),
+            Handle::clone(&ui_assets.font)
+        )],
+    ));
+
+    let is_cleared = game_result.is_some_and(|result| result.is_cleared);
+
+    // missions section
+    ui_base.with_children(|parent| {
+        parent.spawn((
+            Name::new("Missions Section"),
+            Node {
+                display: Display::Flex,
+                flex_direction: FlexDirection::Column,
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::FlexStart,
+                row_gap: Val::Px(8.0),
+                ..Default::default()
+            },
+            Pickable::IGNORE,
+            StateScoped(Screen::Gameplay),
+            children![
+                // stage_clear
+                mission_line(
+                    "Clear the stage",
+                    is_cleared,
+                    Handle::clone(&ui_assets.font),
+                    Handle::clone(&ui_assets.ui_texture),
+                    Handle::clone(&ui_assets.texture_atlas_layout),
+                ),
+                // minimum_bombs
+                mission_line(
+                    &format!(
+                        "Use at most {} bombs",
+                        if is_cleared {
+                            level_layout.meta.min_bombs.to_string()
+                        } else {
+                            "???".to_string()
+                        }
+                    ),
+                    game_result.is_some_and(|result| {
+                        result.used_bomb_count <= level_layout.meta.min_bombs
+                    }),
+                    Handle::clone(&ui_assets.font),
+                    Handle::clone(&ui_assets.ui_texture),
+                    Handle::clone(&ui_assets.texture_atlas_layout),
+                ),
+                // minimum_affected_cells
+                mission_line(
+                    &format!(
+                        "Affect at most {} cells",
+                        if is_cleared {
+                            level_layout.meta.min_affected_cells.to_string()
+                        } else {
+                            "???".to_string()
+                        }
+                    ),
+                    game_result.is_some_and(|result| {
+                        result.affected_cell_count <= level_layout.meta.min_affected_cells
+                    }),
+                    Handle::clone(&ui_assets.font),
+                    Handle::clone(&ui_assets.ui_texture),
+                    Handle::clone(&ui_assets.texture_atlas_layout),
+                ),
+            ],
+        ));
+    });
+}
+
+fn mission_line(
+    text: &str,
+    star_is_lit: bool,
+    font: Handle<Font>,
+    texture_handle: Handle<Image>,
+    layout_handle: Handle<TextureAtlasLayout>,
+) -> impl Bundle {
+    (
+        Node {
+            display: Display::Flex,
+            flex_direction: FlexDirection::Row,
+            align_items: AlignItems::FlexStart,
+            justify_content: JustifyContent::FlexStart,
+            column_gap: Val::Px(8.0),
+            ..Default::default()
+        },
+        Pickable::IGNORE,
+        children![
+            widget::star(star_is_lit, texture_handle, layout_handle),
+            widget::text(text, font),
+        ],
+    )
 }
 
 const CELL_SIZE_BASE: f32 = 32.0;
@@ -299,8 +444,6 @@ fn spawn_grid_cell(
 
     if let Some(&item) = level_layout.objects.get(&grid_coord) {
         // if there is an item at the coordinate, disable interactions and spawn the item
-        println!("Spawning item {:?} at ({}, {})", item, x, y);
-
         entity_builder.with_children(|parent| {
             let mut item_entity = parent.spawn((
                 item,
@@ -343,10 +486,8 @@ fn spawn_grid_cell(
                 }
                 let entity = out.target();
                 let &coord = coord.get(entity).unwrap();
-                println!("Creating object at coord: {:?}", coord);
 
                 let Some(item) = selected_item.0 else {
-                    println!("No item selected, skipping object creation.");
                     return;
                 };
                 commands.trigger(CreateObject {
@@ -354,7 +495,6 @@ fn spawn_grid_cell(
                     coord,
                     item,
                 });
-                println!("Creating object with item: {:?}", item);
             },
         );
     }
@@ -433,10 +573,6 @@ pub enum ItemState {
     Burned,
 }
 
-fn move_to_edit_phase(
-    mut next_state: ResMut<NextState<GamePhase>>,
-    current_level: Res<CurrentLevel>,
-) {
-    println!("Moving to Edit phase for level {}", current_level.level);
+fn move_to_edit_phase(mut next_state: ResMut<NextState<GamePhase>>) {
     next_state.set(GamePhase::Edit);
 }

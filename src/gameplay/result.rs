@@ -1,10 +1,10 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use bevy::prelude::*;
 
 use crate::{
-    audio::{self, SEVolume, SoundEffectAssets, sound_effect},
-    gameplay::{CurrentLevel, GamePhase, Item, ItemState, LevelAssets, LevelLayout},
+    audio::{SEVolume, SoundEffectAssets, sound_effect, stop_music},
+    gameplay::{CurrentLevel, GamePhase, GridCoord, Item, ItemState, LevelAssets, LevelLayout},
     screens::Screen,
     theme::{UiAssets, widget},
 };
@@ -18,7 +18,7 @@ pub(super) fn plugin(app: &mut App) {
             compute_game_result,
             record_cleated_levels,
             init_result_state,
-            audio::stop_music,
+            stop_music,
         )
             .chain(),
     );
@@ -30,21 +30,26 @@ pub struct ClearedLevels(pub HashMap<usize, GameResult>);
 #[derive(Resource, Reflect, Debug, Default, Clone, PartialEq)]
 #[reflect(Resource)]
 pub struct GameResult {
-    level: usize,
-    is_cleared: bool,
-    used_bomb_count: u32,
+    pub level: usize,
+    pub is_cleared: bool,
+    pub used_bomb_count: u8,
+    pub affected_cell_count: u8,
+    pub mission_status: [bool; 3], // clear, min_bombs, min_affected_cells
 }
 
 fn compute_game_result(
     current_level: Res<CurrentLevel>,
     level_assets: Res<Assets<LevelLayout>>,
-    query: Query<(&Item, &ItemState)>,
+    query: Query<(&Item, &ItemState, &GridCoord)>,
     mut result: ResMut<GameResult>,
 ) {
+    // reset to default values
     *result = GameResult {
         level: current_level.level,
         is_cleared: false,
-        used_bomb_count: 0,
+        used_bomb_count: u8::MAX,
+        affected_cell_count: u8::MAX,
+        mission_status: [false; 3],
     };
 
     let Some(level_layout) = level_assets.get(&current_level.layout) else {
@@ -57,21 +62,21 @@ fn compute_game_result(
     // - All rocks are destroyed
     // - All jewels are saved
     // - All enemies are defeated
-    let is_cleared = query.iter().all(|(&item, &state)| match item {
+    let is_cleared = query.iter().all(|(&item, &state, _)| match item {
         Item::BombSmall
         | Item::BombMedium
         | Item::BombLarge
         | Item::BombHorizontal
         | Item::BombVertical => state == ItemState::Burned,
         Item::Rock => state == ItemState::Burned,
-        Item::Gem => state == ItemState::None,
+        Item::Jewel => state == ItemState::None,
         Item::Enemy => state == ItemState::Burned,
         _ => true, // Other items are not relevant for the result
     });
 
-    let total_bomb_count = query
+    let bombs_list = query
         .iter()
-        .filter(|(item, _state)| {
+        .filter(|(item, _state, _)| {
             matches!(
                 item,
                 Item::BombSmall
@@ -81,28 +86,65 @@ fn compute_game_result(
                     | Item::BombVertical
             )
         })
-        .count() as u32;
+        .map(|(&item, &state, &coord)| (item, state, coord))
+        .collect::<Vec<_>>();
 
-    let level_bomb_count = level_layout
-        .objects
-        .iter()
-        .filter(|(_coord, item)| {
-            matches!(
-                item,
-                Item::BombSmall
-                    | Item::BombMedium
-                    | Item::BombLarge
-                    | Item::BombHorizontal
-                    | Item::BombVertical
-            )
-        })
-        .count() as u32;
+    let used_bomb_count = if is_cleared {
+        let total_bomb_count = bombs_list.len() as u8;
 
-    let used_bomb_count = total_bomb_count - level_bomb_count;
+        let level_bomb_count = level_layout
+            .objects
+            .iter()
+            .filter(|(_coord, item)| {
+                matches!(
+                    item,
+                    Item::BombSmall
+                        | Item::BombMedium
+                        | Item::BombLarge
+                        | Item::BombHorizontal
+                        | Item::BombVertical
+                )
+            })
+            .count() as u8;
+
+        total_bomb_count - level_bomb_count
+    } else {
+        u8::MAX
+    };
+
+    let affected_cell_count = if is_cleared {
+        bombs_list
+            .iter()
+            .flat_map(|(item, _state, coord)| {
+                item.impact_zone()
+                    .iter()
+                    .map(move |&(dx, dy)| GridCoord {
+                        x: (coord.x as i8 + dx) as u8,
+                        y: (coord.y as i8 + dy) as u8,
+                    })
+                    .filter(|coord| {
+                        // Ensure the coordinate is within the level bounds
+                        coord.x < level_layout.board_size.0 && coord.y < level_layout.board_size.1
+                    })
+            })
+            .collect::<HashSet<GridCoord>>()
+            .len() as u8
+    } else {
+        u8::MAX
+    };
+
+    let mission_status = [
+        is_cleared,
+        used_bomb_count <= level_layout.meta.min_bombs,
+        affected_cell_count <= level_layout.meta.min_affected_cells,
+    ];
+
     *result = GameResult {
         level: current_level.level,
         is_cleared,
         used_bomb_count,
+        affected_cell_count,
+        mission_status,
     };
 }
 
@@ -117,16 +159,33 @@ fn record_cleated_levels(
     );
 
     if game_result.is_cleared {
-        cleared_levels
+        let current_best = cleared_levels
             .0
-            .insert(current_level.level, game_result.clone());
-        info!(
-            "Level {} cleared! Used {} bombs.",
-            current_level.level, game_result.used_bomb_count
-        );
-    } else {
-        info!("Level {} failed.", current_level.level);
-    };
+            .entry(current_level.level)
+            .or_insert_with(|| GameResult {
+                level: current_level.level,
+                is_cleared: false,
+                used_bomb_count: u8::MAX,
+                affected_cell_count: u8::MAX,
+                mission_status: [false; 3],
+            });
+
+        current_best.is_cleared |= game_result.is_cleared;
+        current_best.used_bomb_count = current_best
+            .used_bomb_count
+            .min(game_result.used_bomb_count);
+        current_best.affected_cell_count = current_best
+            .affected_cell_count
+            .min(game_result.affected_cell_count);
+
+        current_best
+            .mission_status
+            .iter_mut()
+            .enumerate()
+            .for_each(|(i, status)| {
+                *status |= game_result.mission_status[i];
+            });
+    }
 }
 
 fn init_result_state(
@@ -147,7 +206,7 @@ fn init_result_state(
 
     if result.is_cleared {
         entity.insert(children![
-            widget::header("Level Cleared!"),
+            widget::header("Level Cleared!", Handle::clone(&ui_assets.font)),
             widget::text_button("Select Level", &ui_assets, go_level_select),
             widget::text_button("Next Level", &ui_assets, next_level),
         ]);
@@ -157,7 +216,7 @@ fn init_result_state(
         }
     } else {
         entity.insert(children![
-            widget::header("Level Failed..."),
+            widget::header("Level Failed...", Handle::clone(&ui_assets.font)),
             widget::text_button("Select Level", &ui_assets, go_level_select),
             widget::text_button("Retry", &ui_assets, retry_level),
         ]);

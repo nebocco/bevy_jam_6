@@ -56,7 +56,6 @@ fn init_run_state(
     item_query: Query<(Entity, &Item, &GridCoord), Without<Fire>>,
     fire_query: Query<(Entity, &GridCoord), With<Fire>>,
 ) {
-    println!("Initializing run state...");
     timer.0.reset();
 
     running_state.object_map = item_query
@@ -110,7 +109,6 @@ fn tick_timer(
 ) {
     if running_timer.0.tick(time.delta()).just_finished() {
         if burning_stack.0.is_empty() {
-            println!("No items to burn, skipping tick.");
             next_state.set(GamePhase::Result);
         }
         commands.trigger(NextTick);
@@ -129,8 +127,6 @@ fn tick_simulation(
     se_volume: Res<SEVolume>,
 ) {
     running_state.tick += 1;
-    println!("Tick: {}", running_state.tick);
-    println!("Burning stack: {:?}", &burning_stack);
     let mut filtered_burning_stack: Vec<_> = std::mem::take(&mut burning_stack.0)
         .into_iter()
         .filter(|(coord, _item, _entity)| running_state.object_map.remove(coord).is_some())
@@ -223,8 +219,6 @@ fn tick_simulation(
 
     // preserve bombs in the burning stack
     burning_stack.0 = affected_bombs;
-
-    println!("next stack: {:?}", &burning_stack);
 }
 
 fn compute_affected_area(burning_stack: &[(GridCoord, Item, Entity)]) -> Vec<(GridCoord, usize)> {

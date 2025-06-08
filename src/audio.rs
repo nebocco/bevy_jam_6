@@ -141,7 +141,6 @@ impl Default for SEVolume {
 }
 
 pub fn sound_effect(handle: Handle<AudioSource>, se_volume: &SEVolume) -> impl Bundle {
-    println!("Spawning sound effect: {:?}", handle);
     (
         AudioPlayer(handle),
         PlaybackSettings::DESPAWN.with_volume(se_volume.volume),
@@ -160,7 +159,7 @@ struct FadeOut;
 
 fn fade_in(
     mut commands: Commands,
-    mut audio_sink: Query<(&mut AudioSink, Entity), With<FadeIn>>,
+    mut audio_sink: Query<(&mut AudioSink, Entity), (With<FadeIn>, Without<FadeOut>)>,
     music_volume: Res<MusicVolume>,
     time: Res<Time>,
 ) {
@@ -173,7 +172,6 @@ fn fade_in(
                 ),
         );
         if audio.volume().to_linear() >= music_volume.volume.to_linear() {
-            println!("Audio faded in: {:?}", entity);
             audio.set_volume(music_volume.volume);
             commands.entity(entity).remove::<FadeIn>();
         }
@@ -194,7 +192,7 @@ fn fade_out(
                     music_volume.volume.to_linear() * time.delta_secs() / FADE_OUT_TIME,
                 ),
         );
-        if audio.volume().to_linear() <= 0.0 {
+        if audio.volume().to_linear() <= 0.01 {
             commands.entity(entity).despawn();
         }
     }
@@ -202,7 +200,7 @@ fn fade_out(
 
 pub fn stop_music(mut commands: Commands, audio_sink: Query<Entity, With<Music>>) {
     for entity in audio_sink.iter() {
-        commands.entity(entity).remove::<FadeIn>().insert(FadeOut);
+        commands.entity(entity).insert(FadeOut);
     }
 }
 
@@ -225,13 +223,12 @@ fn spawn_music(
     for track in soundtrack.iter() {
         commands.entity(track).remove::<FadeIn>().insert(FadeOut);
     }
-    println!("Changing track");
     commands.spawn(music(Handle::clone(&trigger.handle)));
 }
 
 fn apply_volume_setting(
     music_volume: Res<MusicVolume>,
-    audio_query: Query<&mut AudioSink, With<Music>>,
+    audio_query: Query<&mut AudioSink, (With<Music>, Without<FadeOut>)>,
 ) {
     for mut sink in audio_query {
         sink.set_volume(music_volume.volume);

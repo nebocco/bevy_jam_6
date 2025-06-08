@@ -46,7 +46,6 @@ fn unpause(mut next_pause: ResMut<NextState<Pause>>) {
 }
 
 fn pause(mut next_pause: ResMut<NextState<Pause>>) {
-    println!("Pausing game");
     next_pause.set(Pause(true));
 }
 

@@ -17,7 +17,7 @@ mod run;
 use animation::FireAnimation;
 pub use init_level::{BgAssets, CurrentLevel, LevelAssets};
 use init_level::{ItemAssets, ItemState, LevelLayout};
-pub use result::{ClearedLevels, move_to_level};
+pub use result::{ClearedLevels, GameResult, move_to_level};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_sub_state::<GamePhase>().add_plugins((
@@ -55,7 +55,7 @@ pub enum Item {
     BombVertical,
     Null,
     Rock,
-    Gem,
+    Jewel,
     Eraser,
     Enemy,
 }
@@ -81,7 +81,7 @@ impl Item {
             Item::BombVertical => 4,
             Item::Null => 7,
             Item::Rock => 8,
-            Item::Gem => 10,
+            Item::Jewel => 10,
             Item::Enemy => 11,
             Item::Eraser => 12,
         }
@@ -224,7 +224,7 @@ impl Item {
 
             Item::Eraser => &[(0, 0)],
 
-            Item::Rock | Item::Gem | Item::Enemy | Item::Null => &[],
+            Item::Rock | Item::Jewel | Item::Enemy | Item::Null => &[],
         }
     }
 }

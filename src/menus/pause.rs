@@ -22,7 +22,7 @@ fn spawn_pause_menu(mut commands: Commands, ui_assets: Res<UiAssets>) {
         GlobalZIndex(2),
         StateScoped(Menu::Pause),
         children![
-            widget::header("Game paused"),
+            widget::header("Game paused", Handle::clone(&ui_assets.font)),
             widget::text_button("Continue", &ui_assets, close_menu),
             widget::text_button("Settings", &ui_assets, open_settings_menu),
             widget::text_button("Quit to title", &ui_assets, quit_to_title),

@@ -12,11 +12,7 @@ use bevy::{
 use crate::{
     gameplay::Item,
     screens::LevelStatus,
-    theme::{
-        UiAssets,
-        interaction::{InteractionImagePalette, InteractionPalette},
-        palette::*,
-    },
+    theme::{UiAssets, interaction::InteractionImagePalette, palette::*},
 };
 
 /// A root UI node that fills the window and centers its content.
@@ -39,22 +35,38 @@ pub fn ui_root(name: impl Into<Cow<'static, str>>) -> impl Bundle {
 }
 
 /// A simple header label. Bigger than [`label`].
-pub fn header(text: impl Into<String>) -> impl Bundle {
+pub fn header(text: impl Into<String>, font: Handle<Font>) -> impl Bundle {
     (
         Name::new("Header"),
         Text(text.into()),
-        TextFont::from_font_size(40.0),
+        TextFont::from_font(font).with_font_size(48.0),
         TextColor(HEADER_TEXT),
+        Pickable::IGNORE,
     )
 }
 
 /// A simple text label.
-pub fn label(text: impl Into<String>) -> impl Bundle {
+pub fn label(text: impl Into<String>, font: Option<Handle<Font>>) -> impl Bundle {
     (
         Name::new("Label"),
         Text(text.into()),
-        TextFont::from_font_size(24.0),
+        if let Some(font) = font {
+            TextFont::from_font(font).with_font_size(32.0)
+        } else {
+            TextFont::from_font_size(32.0)
+        },
         TextColor(LABEL_TEXT),
+    )
+}
+
+/// A simple text.
+pub fn text(text: impl Into<String>, font: Handle<Font>) -> impl Bundle {
+    (
+        Name::new("Label"),
+        Text(text.into()),
+        TextFont::from_font(font).with_font_size(32.0),
+        TextColor(TEXT),
+        Pickable::IGNORE,
     )
 }
 
@@ -130,10 +142,12 @@ where
     )
 }
 
-pub fn level_button(index: usize, ui_assets: &UiAssets, level_status: LevelStatus) -> impl Bundle {
+pub fn level_button(index: usize, ui_assets: &UiAssets, level_status: &LevelStatus) -> impl Bundle {
     let text = index.to_string();
     let texture_handle = Handle::clone(&ui_assets.ui_texture);
     let layout = Handle::clone(&ui_assets.texture_atlas_layout);
+    let font_handle = Handle::clone(&ui_assets.font);
+    let level_status = level_status.clone();
     (
         Name::new("Button"),
         Node::default(),
@@ -148,10 +162,11 @@ pub fn level_button(index: usize, ui_assets: &UiAssets, level_status: LevelStatu
                     justify_content: JustifyContent::Center,
                     ..default()
                 },
+                Transform::default(),
                 ImageNode::from_atlas_image(
-                    texture_handle,
+                    Handle::clone(&texture_handle),
                     TextureAtlas {
-                        layout,
+                        layout: Handle::clone(&layout),
                         index: if level_status.is_cleared { 0 } else { 1 },
                     },
                 )
@@ -166,18 +181,62 @@ pub fn level_button(index: usize, ui_assets: &UiAssets, level_status: LevelStatu
                 } else {
                     Color::Srgba(palettes::css::WHITE)
                 }),
-                children![(
-                    Name::new("Button Text"),
-                    Text(text),
-                    TextFont::from_font_size(40.0),
-                    TextColor(if level_status.is_locked {
-                        BUTTON_TEXT_DISABLED
-                    } else {
-                        BUTTON_TEXT
-                    }),
-                    // Don't bubble picking events from the text up to the button.
-                    Pickable::IGNORE,
-                )],
+                children![
+                    (
+                        Name::new("Button Text"),
+                        Text(text),
+                        // TextFont::from_font_size(40.0),
+                        TextFont::from_font(font_handle).with_font_size(48.0),
+                        TextColor(if level_status.is_locked {
+                            BUTTON_TEXT_DISABLED
+                        } else {
+                            BUTTON_TEXT
+                        }),
+                        // Don't bubble picking events from the text up to the button.
+                        Pickable::IGNORE,
+                    ),
+                    (
+                        Name::new("Stars"),
+                        Node {
+                            position_type: PositionType::Absolute,
+                            display: Display::Flex,
+                            flex_direction: FlexDirection::Row,
+                            align_items: AlignItems::Center,
+                            justify_content: JustifyContent::Center,
+                            width: Percent(100.0),
+                            bottom: Px(8.0),
+                            column_gap: Px(-10.0),
+                            ..default()
+                        },
+                        Transform::default(),
+                        children![
+                            star(
+                                level_status
+                                    .best_result
+                                    .as_ref()
+                                    .is_some_and(|result| result.mission_status[0]),
+                                Handle::clone(&texture_handle),
+                                Handle::clone(&layout),
+                            ),
+                            star(
+                                level_status
+                                    .best_result
+                                    .as_ref()
+                                    .is_some_and(|result| result.mission_status[1]),
+                                Handle::clone(&texture_handle),
+                                Handle::clone(&layout),
+                            ),
+                            star(
+                                level_status
+                                    .best_result
+                                    .as_ref()
+                                    .is_some_and(|result| result.mission_status[2]),
+                                Handle::clone(&texture_handle),
+                                Handle::clone(&layout),
+                            ),
+                        ]
+                    )
+                ],
             ));
 
             if !level_status.is_locked {
@@ -188,6 +247,25 @@ pub fn level_button(index: usize, ui_assets: &UiAssets, level_status: LevelStatu
                 });
             }
         })),
+    )
+}
+
+pub fn star(
+    is_lit: bool,
+    texture_handle: Handle<Image>,
+    layout: Handle<TextureAtlasLayout>,
+) -> impl Bundle {
+    (
+        Name::new("Star"),
+        Node::default(),
+        ImageNode::from_atlas_image(
+            texture_handle,
+            TextureAtlas {
+                layout,
+                index: if is_lit { 7 } else { 6 },
+            },
+        ),
+        Transform::from_xyz(0.0, 0.0, 0.1),
     )
 }
 
@@ -206,6 +284,7 @@ where
     let texture_handle = Handle::clone(&ui_assets.ui_texture);
     let layout = Handle::clone(&ui_assets.texture_atlas_layout);
     let action = IntoObserverSystem::into_system(action);
+    let font_handle = Handle::clone(&ui_assets.font);
     (
         Name::new("Button"),
         Node::default(),
@@ -219,6 +298,7 @@ where
                         height: Px(90.0),
                         align_items: AlignItems::Center,
                         justify_content: JustifyContent::Center,
+                        padding: UiRect::top(Val::Px(6.0)),
                         ..default()
                     },
                     ImageNode::from_atlas_image(texture_handle, TextureAtlas { layout, index: 2 })
@@ -236,7 +316,7 @@ where
                     children![(
                         Name::new("Button Text"),
                         Text(text),
-                        TextFont::from_font_size(40.0),
+                        TextFont::from_font(font_handle).with_font_size(48.0),
                         TextColor(BUTTON_TEXT),
                         // Don't bubble picking events from the text up to the button.
                         Pickable::IGNORE,
@@ -367,6 +447,7 @@ where
     let texture_handle = Handle::clone(&ui_assets.ui_texture);
     let layout = Handle::clone(&ui_assets.texture_atlas_layout);
     let action = IntoObserverSystem::into_system(action);
+    let font_handle = Handle::clone(&ui_assets.font);
     (
         Name::new("Button"),
         Node::default(),
@@ -380,6 +461,7 @@ where
                         height: Px(32.0),
                         align_items: AlignItems::Center,
                         justify_content: JustifyContent::Center,
+                        padding: UiRect::top(Val::Px(2.0)),
                         ..default()
                     },
                     ImageNode::from_atlas_image(texture_handle, TextureAtlas { layout, index: 1 })
@@ -397,77 +479,13 @@ where
                     children![(
                         Name::new("Button Text"),
                         Text(text),
-                        TextFont::from_font_size(40.0),
+                        // TextFont::from_font_size(40.0),
+                        TextFont::from_font(font_handle).with_font_size(24.0),
                         TextColor(BUTTON_TEXT),
                         // Don't bubble picking events from the text up to the button.
                         Pickable::IGNORE,
                     )],
                 ))
-                .observe(action);
-        })),
-    )
-}
-
-/// A large rounded button with text and an action defined as an [`Observer`].
-pub fn button<E, B, M, I>(text: impl Into<String>, action: I) -> impl Bundle
-where
-    E: Event,
-    B: Bundle,
-    I: IntoObserverSystem<E, B, M>,
-{
-    button_base(
-        text,
-        action,
-        (
-            Node {
-                width: Px(380.0),
-                height: Px(80.0),
-                align_items: AlignItems::Center,
-                justify_content: JustifyContent::Center,
-                ..default()
-            },
-            BorderRadius::MAX,
-        ),
-    )
-}
-
-/// A simple button with text and an action defined as an [`Observer`]. The button's layout is provided by `button_bundle`.
-fn button_base<E, B, M, I>(
-    text: impl Into<String>,
-    action: I,
-    button_bundle: impl Bundle,
-) -> impl Bundle
-where
-    E: Event,
-    B: Bundle,
-    I: IntoObserverSystem<E, B, M>,
-{
-    let text = text.into();
-    let action = IntoObserverSystem::into_system(action);
-    (
-        Name::new("Button"),
-        Node::default(),
-        Children::spawn(SpawnWith(|parent: &mut ChildSpawner| {
-            parent
-                .spawn((
-                    Name::new("Button Inner"),
-                    Button,
-                    BackgroundColor(BUTTON_BACKGROUND),
-                    InteractionPalette {
-                        none: BUTTON_BACKGROUND,
-                        hovered: BUTTON_HOVERED_BACKGROUND,
-                        pressed: BUTTON_PRESSED_BACKGROUND,
-                    },
-                    children![(
-                        Name::new("Button Text"),
-                        Text(text),
-                        TextFont::from_font_size(40.0),
-                        TextColor(BUTTON_TEXT),
-                        // Don't bubble picking events from the text up to the button.
-                        Pickable::IGNORE,
-                    )],
-                ))
-                .insert(button_bundle)
                 .observe(action);
         })),
     )
