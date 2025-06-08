@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     PausableSystems,
+    audio::{SEVolume, SoundEffectAssets, sound_effect},
     gameplay::{
         FireAnimation, GamePhase, GridCoord, Item, ItemAssets, ItemState, init_level::LevelBase,
     },
@@ -194,6 +195,9 @@ fn create_object(
     mut commands: Commands,
     item_assets: Res<ItemAssets>,
     query: Query<(Entity, &Item, &GridCoord)>,
+
+    se_assets: Option<Res<SoundEffectAssets>>,
+    se_volume: Res<SEVolume>,
 ) {
     let event = trigger.event();
     println!("Creating object at coord: {:?}", event.coord);
@@ -228,6 +232,10 @@ fn create_object(
         .id();
 
     commands.entity(event.parent_grid).add_child(entity);
+
+    if let Some(se_assets) = se_assets {
+        commands.spawn(sound_effect(se_assets.break_2.clone(), &se_volume));
+    }
 }
 
 fn _try_create_single_fire(
@@ -290,8 +298,15 @@ fn run_simulation_with_keyboard(
     button_input: Res<ButtonInput<KeyCode>>,
     fire_query: Query<Entity, With<Fire>>,
     next_state: ResMut<NextState<GamePhase>>,
+    mut commands: Commands,
+    se_assets: Option<Res<SoundEffectAssets>>,
+    se_volume: Res<SEVolume>,
 ) {
     if button_input.just_pressed(KeyCode::Space) {
+        if let Some(se_assets) = se_assets {
+            println!("Running simulation with sound effect.");
+            commands.spawn(sound_effect(se_assets.start_1.clone(), &se_volume));
+        }
         _try_run_simulation(fire_query, next_state);
     }
 }

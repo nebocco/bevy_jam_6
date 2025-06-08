@@ -1,8 +1,10 @@
-use bevy::{ecs::spawn::SpawnWith, prelude::*};
+use bevy::{ecs::spawn::SpawnWith, input::common_conditions::input_just_pressed, prelude::*};
 
 use crate::{
+    Pause,
     audio::{MusicAssets, SpawnMusic},
     gameplay::{ClearedLevels, CurrentLevel, GamePhase, LevelAssets, move_to_level},
+    menus::Menu,
     screens::Screen,
     theme::{UiAssets, widget},
 };
@@ -12,6 +14,58 @@ pub(super) fn plugin(app: &mut App) {
         OnEnter(Screen::LevelSelect),
         (spawn_level_select_screen, spawn_music),
     );
+
+    app.add_systems(
+        Update,
+        (
+            (pause, spawn_pause_overlay, open_pause_menu).run_if(
+                in_state(Screen::LevelSelect)
+                    .and(in_state(Menu::None))
+                    .and(input_just_pressed(KeyCode::KeyP).or(input_just_pressed(KeyCode::Escape))),
+            ),
+            close_menu.run_if(
+                in_state(Screen::LevelSelect)
+                    .and(not(in_state(Menu::None)))
+                    .and(input_just_pressed(KeyCode::KeyP)),
+            ),
+        ),
+    );
+    app.add_systems(OnExit(Screen::LevelSelect), (close_menu, unpause));
+    app.add_systems(
+        OnEnter(Menu::None),
+        unpause.run_if(in_state(Screen::LevelSelect)),
+    );
+}
+
+fn unpause(mut next_pause: ResMut<NextState<Pause>>) {
+    next_pause.set(Pause(false));
+}
+
+fn pause(mut next_pause: ResMut<NextState<Pause>>) {
+    println!("Pausing game");
+    next_pause.set(Pause(true));
+}
+
+fn spawn_pause_overlay(mut commands: Commands) {
+    commands.spawn((
+        Name::new("Pause Overlay"),
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            ..default()
+        },
+        GlobalZIndex(1),
+        BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.8)),
+        StateScoped(Pause(true)),
+    ));
+}
+
+fn open_pause_menu(mut next_menu: ResMut<NextState<Menu>>) {
+    next_menu.set(Menu::Pause);
+}
+
+fn close_menu(mut next_menu: ResMut<NextState<Menu>>) {
+    next_menu.set(Menu::None);
 }
 
 fn spawn_level_select_screen(
@@ -23,7 +77,7 @@ fn spawn_level_select_screen(
     commands.spawn((
         widget::ui_root("Level Select Screen"),
         StateScoped(Screen::LevelSelect),
-        GlobalZIndex(2),
+        GlobalZIndex(0),
         children![
             widget::label("Select Level"),
             stage_select_button_grid(ui_assets, cleared_levels, level_assets)

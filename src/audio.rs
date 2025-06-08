@@ -58,7 +58,11 @@ pub struct SoundEffectAssets {
     pub select_1: Handle<AudioSource>,
     pub select_2: Handle<AudioSource>,
     pub select_3: Handle<AudioSource>,
+    pub select_4: Handle<AudioSource>,
+
     pub start_1: Handle<AudioSource>,
+    pub clear: Handle<AudioSource>,
+    pub failed: Handle<AudioSource>,
 }
 
 impl FromWorld for SoundEffectAssets {
@@ -72,7 +76,10 @@ impl FromWorld for SoundEffectAssets {
         let select_1 = asset_server.load("audio/sound_effects/select_1.wav");
         let select_2 = asset_server.load("audio/sound_effects/select_2.wav");
         let select_3 = asset_server.load("audio/sound_effects/select_3.wav");
+        let select_4 = asset_server.load("audio/sound_effects/select_4.wav");
         let start_1 = asset_server.load("audio/sound_effects/start_1.wav");
+        let clear = asset_server.load("audio/sound_effects/clear.wav");
+        let failed = asset_server.load("audio/sound_effects/failed.wav");
 
         SoundEffectAssets {
             explosion_1,
@@ -83,7 +90,10 @@ impl FromWorld for SoundEffectAssets {
             select_1,
             select_2,
             select_3,
+            select_4,
             start_1,
+            clear,
+            failed,
         }
     }
 }
@@ -116,13 +126,22 @@ fn music(handle: Handle<AudioSource>) -> impl Bundle {
 #[reflect(Component)]
 pub struct SoundEffect;
 
-#[derive(Resource, Reflect, Debug, Default)]
+#[derive(Resource, Reflect, Debug)]
 #[reflect(Resource)]
 pub struct SEVolume {
     pub volume: Volume,
 }
 
+impl Default for SEVolume {
+    fn default() -> Self {
+        Self {
+            volume: Volume::Linear(0.7), // Default sound effect volume
+        }
+    }
+}
+
 pub fn sound_effect(handle: Handle<AudioSource>, se_volume: &SEVolume) -> impl Bundle {
+    println!("Spawning sound effect: {:?}", handle);
     (
         AudioPlayer(handle),
         PlaybackSettings::DESPAWN.with_volume(se_volume.volume),
@@ -146,7 +165,6 @@ fn fade_in(
     time: Res<Time>,
 ) {
     for (mut audio, entity) in audio_sink.iter_mut() {
-        println!("Fading in audio: {:?}", entity);
         let current_volume = audio.volume();
         audio.set_volume(
             current_volume
@@ -179,6 +197,12 @@ fn fade_out(
         if audio.volume().to_linear() <= 0.0 {
             commands.entity(entity).despawn();
         }
+    }
+}
+
+pub fn stop_music(mut commands: Commands, audio_sink: Query<Entity, With<Music>>) {
+    for entity in audio_sink.iter() {
+        commands.entity(entity).remove::<FadeIn>().insert(FadeOut);
     }
 }
 
