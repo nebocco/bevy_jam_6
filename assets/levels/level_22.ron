@@ -14,7 +14,7 @@
     },
     fire_coord: (x:5, y:2),
     meta: (
-        name: "Triplets",
+        name: "Triplet",
         min_bombs: 3,
         min_affected_cells: 23,
     )
