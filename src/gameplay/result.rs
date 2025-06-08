@@ -179,7 +179,7 @@ fn init_result_state(
 
     if result.is_cleared {
         entity.insert(children![
-            widget::header("Level Cleared!"),
+            widget::header("Level Cleared!", Handle::clone(&ui_assets.font)),
             widget::text_button("Select Level", &ui_assets, go_level_select),
             widget::text_button("Next Level", &ui_assets, next_level),
         ]);
@@ -189,7 +189,7 @@ fn init_result_state(
         }
     } else {
         entity.insert(children![
-            widget::header("Level Failed..."),
+            widget::header("Level Failed...", Handle::clone(&ui_assets.font)),
             widget::text_button("Select Level", &ui_assets, go_level_select),
             widget::text_button("Retry", &ui_assets, retry_level),
         ]);

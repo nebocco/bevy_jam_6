@@ -17,7 +17,7 @@ mod run;
 use animation::FireAnimation;
 pub use init_level::{BgAssets, CurrentLevel, LevelAssets};
 use init_level::{ItemAssets, ItemState, LevelLayout};
-pub use result::{ClearedLevels, GameResult, move_to_level};
+pub use result::{ClearedLevels, move_to_level};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_sub_state::<GamePhase>().add_plugins((

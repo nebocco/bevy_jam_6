@@ -39,11 +39,11 @@ pub fn ui_root(name: impl Into<Cow<'static, str>>) -> impl Bundle {
 }
 
 /// A simple header label. Bigger than [`label`].
-pub fn header(text: impl Into<String>) -> impl Bundle {
+pub fn header(text: impl Into<String>, font: Handle<Font>) -> impl Bundle {
     (
         Name::new("Header"),
         Text(text.into()),
-        TextFont::from_font_size(32.0),
+        TextFont::from_font(font).with_font_size(48.0),
         TextColor(HEADER_TEXT),
         Pickable::IGNORE,
     )

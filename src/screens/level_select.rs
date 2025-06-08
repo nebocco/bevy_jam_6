@@ -78,7 +78,7 @@ fn spawn_level_select_screen(
         StateScoped(Screen::LevelSelect),
         GlobalZIndex(0),
         children![
-            widget::header("Select Level"),
+            widget::header("Select Level", Handle::clone(&ui_assets.font)),
             stage_select_button_grid(ui_assets, &cleared_levels, &level_assets)
         ],
     ));

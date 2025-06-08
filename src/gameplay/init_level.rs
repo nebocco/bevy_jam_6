@@ -14,11 +14,14 @@ use serde::{Deserialize, Serialize};
 use crate::{
     asset_tracking::LoadResource,
     gameplay::{
-        ClearedLevels, GamePhase, GameResult, GridCoord, Item,
+        ClearedLevels, GamePhase, GridCoord, Item,
         edit::{CreateObject, SelectedItem, fire},
     },
     screens::Screen,
-    theme::widget::{self},
+    theme::{
+        UiAssets,
+        widget::{self},
+    },
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -31,7 +34,7 @@ pub(super) fn plugin(app: &mut App) {
         .init_resource::<CurrentLevel>();
     app.add_systems(
         OnEnter(GamePhase::Init),
-        (despawn_old_level, spawn_level).chain(),
+        (despawn_old_level, (spawn_level, spawn_level_ui_components)).chain(),
     )
     .add_systems(
         PostUpdate,
@@ -212,13 +215,10 @@ fn spawn_level(
     item_assets: Res<ItemAssets>,
     current_level: Res<CurrentLevel>,
     level_layouts: Res<Assets<LevelLayout>>,
-    cleared_levels: Res<ClearedLevels>,
 ) {
     let level_layout = level_layouts
         .get(&current_level.layout)
         .expect("Level layout not found");
-
-    let game_result = cleared_levels.0.get(&current_level.level);
 
     commands
         .spawn((
@@ -230,16 +230,21 @@ fn spawn_level(
         ))
         .with_children(|parent| spawn_grid(parent, bg_assets, item_assets, level_layout))
         .observe(reset_tint_colors_on_out);
-
-    spawn_level_ui_components(&mut commands, &current_level, level_layout, game_result);
 }
 
 fn spawn_level_ui_components(
-    commands: &mut Commands,
-    current_level: &CurrentLevel,
-    level_layout: &LevelLayout,
-    game_result: Option<&GameResult>,
-) -> impl Bundle {
+    mut commands: Commands,
+    ui_assets: Res<UiAssets>,
+    level_layouts: Res<Assets<LevelLayout>>,
+    cleared_levels: Res<ClearedLevels>,
+    current_level: Res<CurrentLevel>,
+) {
+    let level_layout = level_layouts
+        .get(&current_level.layout)
+        .expect("Level layout not found");
+
+    let game_result = cleared_levels.0.get(&current_level.level);
+
     let mut ui_base = commands.spawn((
         Name::new("Level UI"),
         Node {
@@ -270,7 +275,8 @@ fn spawn_level_ui_components(
                 format!("Level {}: {}", current_level.level, name)
             } else {
                 format!("Level {}", current_level.level)
-            }
+            },
+            Handle::clone(&ui_assets.font)
         )],
     ));
 

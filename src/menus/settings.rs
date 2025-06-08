@@ -33,7 +33,7 @@ fn spawn_settings_menu(mut commands: Commands, ui_assets: Res<UiAssets>) {
         GlobalZIndex(2),
         StateScoped(Menu::Settings),
         children![
-            widget::header("Settings"),
+            widget::header("Settings", Handle::clone(&ui_assets.font)),
             settings_grid(&ui_assets),
             widget::text_button("Back", &ui_assets, go_back_on_click),
         ],

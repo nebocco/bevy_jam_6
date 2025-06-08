@@ -23,9 +23,9 @@ fn spawn_credits_menu(mut commands: Commands, ui_assets: Res<UiAssets>) {
         GlobalZIndex(2),
         StateScoped(Menu::Credits),
         children![
-            widget::header("Created by"),
+            widget::header("Created by", Handle::clone(&ui_assets.font)),
             created_by(),
-            widget::header("Assets"),
+            widget::header("Assets", Handle::clone(&ui_assets.font)),
             assets(),
             widget::text_button("Back", &ui_assets, go_back_on_click),
         ],
