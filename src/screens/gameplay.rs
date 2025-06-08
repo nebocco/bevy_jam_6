@@ -2,10 +2,16 @@
 
 use bevy::{input::common_conditions::input_just_pressed, prelude::*, ui::Val::*};
 
-use crate::{Pause, demo::level::spawn_level, menus::Menu, screens::Screen};
+use crate::{
+    Pause,
+    audio::{MusicAssets, SpawnMusic},
+    gameplay::GamePhase,
+    menus::Menu,
+    screens::Screen,
+};
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(OnEnter(Screen::Gameplay), spawn_level);
+    app.add_systems(OnEnter(Screen::Gameplay), spawn_music);
 
     // Toggle pause on key press.
     app.add_systems(
@@ -13,6 +19,7 @@ pub(super) fn plugin(app: &mut App) {
         (
             (pause, spawn_pause_overlay, open_pause_menu).run_if(
                 in_state(Screen::Gameplay)
+                    .and(in_state(GamePhase::Edit))
                     .and(in_state(Menu::None))
                     .and(input_just_pressed(KeyCode::KeyP).or(input_just_pressed(KeyCode::Escape))),
             ),
@@ -30,11 +37,16 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
+fn spawn_music(mut commands: Commands, music_assets: Res<MusicAssets>) {
+    commands.trigger(SpawnMusic::new(Handle::clone(&music_assets.in_game_bgm)));
+}
+
 fn unpause(mut next_pause: ResMut<NextState<Pause>>) {
     next_pause.set(Pause(false));
 }
 
 fn pause(mut next_pause: ResMut<NextState<Pause>>) {
+    println!("Pausing game");
     next_pause.set(Pause(true));
 }
 

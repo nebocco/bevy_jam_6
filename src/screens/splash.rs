@@ -6,7 +6,11 @@ use bevy::{
     prelude::*,
 };
 
-use crate::{AppSystems, screens::Screen, theme::prelude::*};
+use crate::{
+    AppSystems,
+    screens::Screen,
+    theme::{palette::MAIN_COLOR, prelude::*},
+};
 
 pub(super) fn plugin(app: &mut App) {
     // Spawn splash screen.
@@ -51,7 +55,7 @@ const SPLASH_FADE_DURATION_SECS: f32 = 0.6;
 fn spawn_splash_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         widget::ui_root("Splash Screen"),
-        BackgroundColor(SPLASH_BACKGROUND_COLOR),
+        BackgroundColor(MAIN_COLOR),
         StateScoped(Screen::Splash),
         children![(
             Name::new("Splash image"),

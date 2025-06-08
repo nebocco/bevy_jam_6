@@ -1,10 +1,16 @@
 use bevy::prelude::*;
 
-use crate::{asset_tracking::LoadResource, audio::sound_effect};
+use crate::{
+    asset_tracking::LoadResource,
+    audio::{SEVolume, sound_effect},
+};
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<InteractionPalette>();
-    app.add_systems(Update, apply_interaction_palette);
+    app.add_systems(
+        Update,
+        (apply_interaction_palette, apply_interaction_image_palette),
+    );
 
     app.register_type::<InteractionAssets>();
     app.load_resource::<InteractionAssets>();
@@ -63,13 +69,14 @@ fn play_on_hover_sound_effect(
     mut commands: Commands,
     interaction_assets: Option<Res<InteractionAssets>>,
     interaction_query: Query<(), With<Interaction>>,
+    se_volume: Res<SEVolume>,
 ) {
     let Some(interaction_assets) = interaction_assets else {
         return;
     };
 
     if interaction_query.contains(trigger.target()) {
-        commands.spawn(sound_effect(interaction_assets.hover.clone()));
+        commands.spawn(sound_effect(interaction_assets.hover.clone(), &se_volume));
     }
 }
 
@@ -78,12 +85,36 @@ fn play_on_click_sound_effect(
     mut commands: Commands,
     interaction_assets: Option<Res<InteractionAssets>>,
     interaction_query: Query<(), With<Interaction>>,
+    se_volume: Res<SEVolume>,
 ) {
     let Some(interaction_assets) = interaction_assets else {
         return;
     };
 
     if interaction_query.contains(trigger.target()) {
-        commands.spawn(sound_effect(interaction_assets.click.clone()));
+        commands.spawn(sound_effect(interaction_assets.click.clone(), &se_volume));
+    }
+}
+
+#[derive(Component, Debug, Reflect)]
+#[reflect(Component)]
+pub struct InteractionImagePalette {
+    pub none: Color,
+    pub hovered: Color,
+    pub pressed: Color,
+}
+
+fn apply_interaction_image_palette(
+    mut palette_query: Query<
+        (&Interaction, &InteractionImagePalette, &mut ImageNode),
+        Changed<Interaction>,
+    >,
+) {
+    for (interaction, palette, mut image_node) in &mut palette_query {
+        image_node.color = match interaction {
+            Interaction::None => palette.none,
+            Interaction::Hovered => palette.hovered,
+            Interaction::Pressed => palette.pressed,
+        };
     }
 }
