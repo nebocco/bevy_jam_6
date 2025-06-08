@@ -18,6 +18,48 @@ fn spawn_main_menu(mut commands: Commands, ui_assets: Res<UiAssets>) {
         widget::ui_root("Main Menu"),
         GlobalZIndex(2),
         StateScoped(Menu::Main),
+        children![(
+            Name::new("Container"),
+            Node {
+                display: Display::Flex,
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                flex_direction: FlexDirection::Column,
+                row_gap: Val::Px(20.0),
+                ..default()
+            },
+            children![title_logo(&ui_assets), menu_buttons(&ui_assets),],
+        )],
+    ));
+}
+
+fn title_logo(ui_assets: &UiAssets) -> impl Bundle {
+    (
+        Node {
+            display: Display::Flex,
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            flex_direction: FlexDirection::Row,
+            row_gap: Val::Px(10.0),
+            ..default()
+        },
+        children![
+            widget::title("Bombombo", Handle::clone(&ui_assets.font)),
+            widget::title_logo(ui_assets)
+        ],
+    )
+}
+
+fn menu_buttons(ui_assets: &UiAssets) -> impl Bundle {
+    (
+        Node {
+            display: Display::Flex,
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            flex_direction: FlexDirection::Column,
+            row_gap: Val::Px(20.0),
+            ..default()
+        },
         #[cfg(not(target_family = "wasm"))]
         children![
             widget::text_button("Play", &ui_assets, enter_loading_or_gameplay_screen),
@@ -31,7 +73,7 @@ fn spawn_main_menu(mut commands: Commands, ui_assets: Res<UiAssets>) {
             widget::text_button("Settings", &ui_assets, open_settings_menu),
             widget::text_button("Credits", &ui_assets, open_credits_menu),
         ],
-    ));
+    )
 }
 
 fn enter_loading_or_gameplay_screen(
