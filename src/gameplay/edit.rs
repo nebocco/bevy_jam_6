@@ -163,10 +163,8 @@ fn select_item<const I: u8>(
 ) {
     let item = Item::from(I);
     selected_item.0 = if selected_item.0 == Some(item) || *game_phase.get() != GamePhase::Edit {
-        println!("Deselecting item: {:?}", item);
         None
     } else {
-        println!("Selected item: {:?}", item);
         Some(item)
     }
 }
@@ -200,8 +198,6 @@ fn create_object(
     se_volume: Res<SEVolume>,
 ) {
     let event = trigger.event();
-    println!("Creating object at coord: {:?}", event.coord);
-    println!("{:?}", query.iter().collect::<Vec<_>>());
 
     if let Some((existing_entity, _item, _coord)) =
         query.iter().find(|&(_, _, coord)| coord == &event.coord)
@@ -245,20 +241,17 @@ fn _try_create_single_fire(
     fire_query: Query<(Entity, &GridCoord), With<Fire>>,
     item_assets: Res<ItemAssets>,
 ) {
-    println!("Attempting to create fire at coord: {:?}", trigger.coord);
     // if there is no bomb at the coordinate, do nothing
     let Some((parent_entity, _item, _coord)) = item_query
         .iter()
         .find(|&(_, item, coord)| item.is_bomb() && *coord == trigger.coord)
     else {
-        println!("No bomb object found at the coordinate.");
         return;
     };
 
     if let Ok((fire_entity, &fire_coord)) = fire_query.single() {
         commands.entity(fire_entity).despawn();
         if fire_coord == trigger.coord {
-            println!("Fire already exists at this coordinate, skipping creation.");
             return;
         }
     }
@@ -304,7 +297,6 @@ fn run_simulation_with_keyboard(
 ) {
     if button_input.just_pressed(KeyCode::Space) {
         if let Some(se_assets) = se_assets {
-            println!("Running simulation with sound effect.");
             commands.spawn(sound_effect(se_assets.start_1.clone(), &se_volume));
         }
         _try_run_simulation(fire_query, next_state);
@@ -318,7 +310,6 @@ fn run_simulation_with_button(
     next_state: ResMut<NextState<GamePhase>>,
 ) {
     if *state.get() != GamePhase::Edit {
-        println!("Cannot run simulation, not in Edit phase.");
         return;
     }
 
@@ -330,9 +321,7 @@ fn _try_run_simulation(
     mut next_state: ResMut<NextState<GamePhase>>,
 ) {
     if fire_query.is_empty() {
-        println!("No fire objects found, cannot run simulation.");
     } else {
-        println!("Fire objects found, proceeding with simulation.");
         next_state.set(GamePhase::Run);
     }
 }

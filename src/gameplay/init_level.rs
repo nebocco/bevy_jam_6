@@ -195,7 +195,6 @@ fn despawn_old_level(
     mut selected_item: ResMut<SelectedItem>,
 ) {
     for entity in query.iter() {
-        println!("Despawning entity: {:?}", entity);
         commands.entity(entity).despawn();
     }
 
@@ -299,8 +298,6 @@ fn spawn_grid_cell(
 
     if let Some(&item) = level_layout.objects.get(&grid_coord) {
         // if there is an item at the coordinate, disable interactions and spawn the item
-        println!("Spawning item {:?} at ({}, {})", item, x, y);
-
         entity_builder.with_children(|parent| {
             let mut item_entity = parent.spawn((
                 item,
@@ -343,10 +340,8 @@ fn spawn_grid_cell(
                 }
                 let entity = out.target();
                 let &coord = coord.get(entity).unwrap();
-                println!("Creating object at coord: {:?}", coord);
 
                 let Some(item) = selected_item.0 else {
-                    println!("No item selected, skipping object creation.");
                     return;
                 };
                 commands.trigger(CreateObject {
@@ -354,7 +349,6 @@ fn spawn_grid_cell(
                     coord,
                     item,
                 });
-                println!("Creating object with item: {:?}", item);
             },
         );
     }
@@ -433,10 +427,6 @@ pub enum ItemState {
     Burned,
 }
 
-fn move_to_edit_phase(
-    mut next_state: ResMut<NextState<GamePhase>>,
-    current_level: Res<CurrentLevel>,
-) {
-    println!("Moving to Edit phase for level {}", current_level.level);
+fn move_to_edit_phase(mut next_state: ResMut<NextState<GamePhase>>) {
     next_state.set(GamePhase::Edit);
 }

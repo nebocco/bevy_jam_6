@@ -141,7 +141,6 @@ impl Default for SEVolume {
 }
 
 pub fn sound_effect(handle: Handle<AudioSource>, se_volume: &SEVolume) -> impl Bundle {
-    println!("Spawning sound effect: {:?}", handle);
     (
         AudioPlayer(handle),
         PlaybackSettings::DESPAWN.with_volume(se_volume.volume),
@@ -173,7 +172,6 @@ fn fade_in(
                 ),
         );
         if audio.volume().to_linear() >= music_volume.volume.to_linear() {
-            println!("Audio faded in: {:?}", entity);
             audio.set_volume(music_volume.volume);
             commands.entity(entity).remove::<FadeIn>();
         }
@@ -225,7 +223,6 @@ fn spawn_music(
     for track in soundtrack.iter() {
         commands.entity(track).remove::<FadeIn>().insert(FadeOut);
     }
-    println!("Changing track");
     commands.spawn(music(Handle::clone(&trigger.handle)));
 }
 

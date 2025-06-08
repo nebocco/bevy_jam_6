@@ -42,7 +42,6 @@ fn unpause(mut next_pause: ResMut<NextState<Pause>>) {
 }
 
 fn pause(mut next_pause: ResMut<NextState<Pause>>) {
-    println!("Pausing game");
     next_pause.set(Pause(true));
 }
 
@@ -118,8 +117,6 @@ fn stage_select_button_grid(
             is_locked: false, // TODO: REMOVE !!!
         })
         .collect::<Vec<_>>();
-
-    println!("Level Status List: {:?}", level_status_list);
 
     (
         Node {
