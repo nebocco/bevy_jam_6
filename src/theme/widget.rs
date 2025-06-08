@@ -43,8 +43,9 @@ pub fn header(text: impl Into<String>) -> impl Bundle {
     (
         Name::new("Header"),
         Text(text.into()),
-        TextFont::from_font_size(40.0),
+        TextFont::from_font_size(32.0),
         TextColor(HEADER_TEXT),
+        Pickable::IGNORE,
     )
 }
 
@@ -53,7 +54,7 @@ pub fn footer(text: impl Into<String>) -> impl Bundle {
     (
         Name::new("Header"),
         Text(text.into()),
-        TextFont::from_font_size(40.0),
+        TextFont::from_font_size(32.0),
         TextColor(HEADER_TEXT),
     )
 }
@@ -73,8 +74,9 @@ pub fn text(text: impl Into<String>) -> impl Bundle {
     (
         Name::new("Label"),
         Text(text.into()),
-        TextFont::from_font_size(24.0),
+        TextFont::from_font_size(16.0),
         TextColor(TEXT),
+        Pickable::IGNORE,
     )
 }
 

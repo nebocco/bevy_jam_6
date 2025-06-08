@@ -1,10 +1,10 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use bevy::prelude::*;
 
 use crate::{
     audio::{self, SEVolume, SoundEffectAssets, sound_effect},
-    gameplay::{CurrentLevel, GamePhase, Item, ItemState, LevelAssets, LevelLayout},
+    gameplay::{CurrentLevel, GamePhase, GridCoord, Item, ItemState, LevelAssets, LevelLayout},
     screens::Screen,
     theme::{UiAssets, widget},
 };
@@ -30,21 +30,23 @@ pub struct ClearedLevels(pub HashMap<usize, GameResult>);
 #[derive(Resource, Reflect, Debug, Default, Clone, PartialEq)]
 #[reflect(Resource)]
 pub struct GameResult {
-    level: usize,
-    is_cleared: bool,
-    used_bomb_count: u32,
+    pub level: usize,
+    pub is_cleared: bool,
+    pub used_bomb_count: u8,
+    pub affected_cell_count: u8,
 }
 
 fn compute_game_result(
     current_level: Res<CurrentLevel>,
     level_assets: Res<Assets<LevelLayout>>,
-    query: Query<(&Item, &ItemState)>,
+    query: Query<(&Item, &ItemState, &GridCoord)>,
     mut result: ResMut<GameResult>,
 ) {
     *result = GameResult {
         level: current_level.level,
         is_cleared: false,
-        used_bomb_count: 0,
+        used_bomb_count: u8::MAX,
+        affected_cell_count: u8::MAX,
     };
 
     let Some(level_layout) = level_assets.get(&current_level.layout) else {
@@ -57,7 +59,7 @@ fn compute_game_result(
     // - All rocks are destroyed
     // - All jewels are saved
     // - All enemies are defeated
-    let is_cleared = query.iter().all(|(&item, &state)| match item {
+    let is_cleared = query.iter().all(|(&item, &state, _)| match item {
         Item::BombSmall
         | Item::BombMedium
         | Item::BombLarge
@@ -69,9 +71,9 @@ fn compute_game_result(
         _ => true, // Other items are not relevant for the result
     });
 
-    let total_bomb_count = query
+    let bombs_list = query
         .iter()
-        .filter(|(item, _state)| {
+        .filter(|(item, _state, _)| {
             matches!(
                 item,
                 Item::BombSmall
@@ -81,28 +83,58 @@ fn compute_game_result(
                     | Item::BombVertical
             )
         })
-        .count() as u32;
+        .map(|(&item, &state, &coord)| (item, state, coord))
+        .collect::<Vec<_>>();
 
-    let level_bomb_count = level_layout
-        .objects
-        .iter()
-        .filter(|(_coord, item)| {
-            matches!(
-                item,
-                Item::BombSmall
-                    | Item::BombMedium
-                    | Item::BombLarge
-                    | Item::BombHorizontal
-                    | Item::BombVertical
-            )
-        })
-        .count() as u32;
+    let used_bomb_count = if is_cleared {
+        let total_bomb_count = bombs_list.len() as u8;
 
-    let used_bomb_count = total_bomb_count - level_bomb_count;
+        let level_bomb_count = level_layout
+            .objects
+            .iter()
+            .filter(|(_coord, item)| {
+                matches!(
+                    item,
+                    Item::BombSmall
+                        | Item::BombMedium
+                        | Item::BombLarge
+                        | Item::BombHorizontal
+                        | Item::BombVertical
+                )
+            })
+            .count() as u8;
+
+        total_bomb_count - level_bomb_count
+    } else {
+        u8::MAX
+    };
+
+    let affected_cell_count = if is_cleared {
+        bombs_list
+            .iter()
+            .flat_map(|(item, _state, coord)| {
+                item.impact_zone()
+                    .iter()
+                    .map(move |&(dx, dy)| GridCoord {
+                        x: (coord.x as i8 + dx) as u8,
+                        y: (coord.y as i8 + dy) as u8,
+                    })
+                    .filter(|coord| {
+                        // Ensure the coordinate is within the level bounds
+                        coord.x < level_layout.board_size.0 && coord.y < level_layout.board_size.1
+                    })
+            })
+            .collect::<HashSet<GridCoord>>()
+            .len() as u8
+    } else {
+        u8::MAX
+    };
+
     *result = GameResult {
         level: current_level.level,
         is_cleared,
         used_bomb_count,
+        affected_cell_count,
     };
 }
 

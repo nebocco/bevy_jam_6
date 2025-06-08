@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     asset_tracking::LoadResource,
     gameplay::{
-        GamePhase, GridCoord, Item,
+        ClearedLevels, GamePhase, GameResult, GridCoord, Item,
         edit::{CreateObject, SelectedItem, fire},
     },
     screens::Screen,
@@ -134,6 +134,8 @@ pub struct LevelLayout {
 pub struct LevelMetaData {
     pub name: Option<String>,
     pub message: Option<String>,
+    pub min_bombs: u8,
+    pub min_affected_cells: u8,
 }
 
 #[derive(Default)]
@@ -210,10 +212,13 @@ fn spawn_level(
     item_assets: Res<ItemAssets>,
     current_level: Res<CurrentLevel>,
     level_layouts: Res<Assets<LevelLayout>>,
+    cleared_levels: Res<ClearedLevels>,
 ) {
     let level_layout = level_layouts
         .get(&current_level.layout)
         .expect("Level layout not found");
+
+    let game_result = cleared_levels.0.get(&current_level.level);
 
     commands
         .spawn((
@@ -226,24 +231,119 @@ fn spawn_level(
         .with_children(|parent| spawn_grid(parent, bg_assets, item_assets, level_layout))
         .observe(reset_tint_colors_on_out);
 
-    if let Some(message) = level_layout.meta.message.as_ref() {
-        commands.spawn((
+    spawn_level_ui_components(&mut commands, &current_level, level_layout, game_result);
+}
+
+fn spawn_level_ui_components(
+    commands: &mut Commands,
+    current_level: &CurrentLevel,
+    level_layout: &LevelLayout,
+    game_result: Option<&GameResult>,
+) -> impl Bundle {
+    let mut ui_base = commands.spawn((
+        Name::new("Level UI"),
+        Node {
+            position_type: PositionType::Absolute,
+            display: Display::Flex,
+            flex_direction: FlexDirection::Column,
+            justify_content: JustifyContent::FlexStart,
+            align_items: AlignItems::FlexStart,
+            left: Val::Px(48.0),
+            top: Val::Px(48.0),
+            row_gap: Val::Px(24.0),
+            ..Default::default()
+        },
+        LevelBase,
+        Pickable::IGNORE,
+    ));
+
+    // level name
+    ui_base.with_child((
+        Node {
+            display: Display::Flex,
+            ..Default::default()
+        },
+        StateScoped(Screen::Gameplay),
+        Pickable::IGNORE,
+        children![widget::header(
+            if let Some(name) = &level_layout.meta.name {
+                format!("Level {}: {}", current_level.level, name)
+            } else {
+                format!("Level {}", current_level.level)
+            }
+        )],
+    ));
+
+    let is_cleared = game_result.map_or(false, |result| result.is_cleared);
+
+    // missions section
+    ui_base.with_children(|parent| {
+        parent.spawn((
+            Name::new("Missions Section"),
             Node {
-                position_type: PositionType::Absolute,
                 display: Display::Flex,
                 flex_direction: FlexDirection::Column,
                 justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
-                width: Val::Percent(100.0),
-                height: Val::Percent(10.0),
-                bottom: Val::Px(20.0),
+                align_items: AlignItems::FlexStart,
+                row_gap: Val::Px(8.0),
                 ..Default::default()
             },
-            LevelBase,
-            children![widget::text(message),],
+            Pickable::IGNORE,
             StateScoped(Screen::Gameplay),
+            children![
+                // stage_clear
+                mission_line("Clear the stage", is_cleared),
+                // minimum_bombs
+                mission_line(
+                    &format!(
+                        "Use at most {} bombs",
+                        if is_cleared {
+                            level_layout.meta.min_bombs.to_string()
+                        } else {
+                            "???".to_string()
+                        }
+                    ),
+                    game_result.map_or(false, |result| result.used_bomb_count
+                        <= level_layout.meta.min_bombs)
+                ),
+                // minimum_affected_cells
+                mission_line(
+                    &format!(
+                        "Affect at most {} cells",
+                        if is_cleared {
+                            level_layout.meta.min_affected_cells.to_string()
+                        } else {
+                            "???".to_string()
+                        }
+                    ),
+                    game_result.map_or(false, |result| result.affected_cell_count
+                        <= level_layout.meta.min_affected_cells)
+                ),
+            ],
         ));
-    }
+    });
+}
+
+fn mission_line(text: &str, star_is_lit: bool) -> impl Bundle {
+    let _star_color = if star_is_lit {
+        palettes::css::GOLD
+    } else {
+        palettes::css::LIGHT_GRAY
+    };
+    (
+        Node {
+            display: Display::Flex,
+            flex_direction: FlexDirection::Row,
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::FlexStart,
+            ..Default::default()
+        },
+        Pickable::IGNORE,
+        children![
+            // widget::icon("star", star_color, 16.0),
+            widget::text(text),
+        ],
+    )
 }
 
 const CELL_SIZE_BASE: f32 = 32.0;
