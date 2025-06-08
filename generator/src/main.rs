@@ -3,13 +3,15 @@ use good_lp::{
     Expression, IntoAffineExpression, ProblemVariables, Solution, SolutionStatus, SolverModel,
     Variable, default_solver, variable::variable, variables,
 };
+use indicatif::{MultiProgress, ProgressIterator};
 use rand::prelude::*;
 use rand_chacha::ChaCha20Rng;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 fn main() {
-    run_solver();
+    // run_solver();
+    compare_two_solver();
 }
 
 fn run_solver() {
@@ -36,6 +38,78 @@ fn run_solver() {
 
         println!("Solution found:");
         println!("-  Bombs placed: {:?}", solution.bombs);
+        display_solution(&solution);
+    }
+}
+
+fn compare_two_solver() {
+    let seed = 42; // Example seed, can be any u64 value
+    let mut generator = Generator::new(seed);
+
+    const ITER_COUNT: usize = 3;
+
+    let m = MultiProgress::new();
+    let pb_outer = m.add(indicatif::ProgressBar::new(4));
+
+    for aside in (6..10).progress() {
+        let pb_inner = m.add(indicatif::ProgressBar::new(ITER_COUNT as u64));
+        pb_outer.inc(1);
+        for i in 0..ITER_COUNT {
+            pb_inner.inc(1);
+            let Ok(level) = generator.generate_random_level(aside, aside) else {
+                println!("Failed to generate level");
+                continue;
+            };
+
+            let lp_solver = LpSolver;
+            let Ok(solution1) = lp_solver.solve_minimal_bombs(&level) else {
+                println!("Failed to solve level");
+                continue;
+            };
+
+            let Ok(solution2) = lp_solver.solve_minimal_affected_areas(&level) else {
+                println!("Failed to solve level");
+                continue;
+            };
+
+            if solution1.bombs.len() >= solution2.bombs.len() {
+                println!(
+                    "Both solutions have the same number of bombs: {}",
+                    solution1.bombs.len()
+                );
+                continue;
+            }
+
+            if solution1.count_affected_cells() <= solution2.count_affected_cells() {
+                println!(
+                    "Both solutions have the same number of affected areas: {}",
+                    solution1.count_affected_cells()
+                );
+                // continue;
+            } else {
+                println!("*** DIFFERENT SOLUTIONS FOUND ***");
+            }
+
+            println!("# Level {i}");
+            display_level(&level);
+
+            println!("Min Bombs Solution:");
+            println!(
+                "Bombs: {}, Affected Areas: {}",
+                solution1.bombs.len(),
+                solution1.count_affected_cells()
+            );
+            display_solution(&solution1);
+
+            println!("Min Affected Areas Solution:");
+            println!(
+                "Bombs: {}, Affected Areas: {}",
+                solution2.bombs.len(),
+                solution2.count_affected_cells()
+            );
+            display_solution(&solution2);
+        }
+        pb_inner.finish();
     }
 }
 
@@ -332,12 +406,6 @@ impl Generator {
                     .filter(|pos| check_possibly_placed(pos, item, objects))
                     .collect::<Vec<_>>();
 
-                println!(
-                    "Possible positions for {:?}: {}",
-                    item,
-                    possible_positions.len()
-                );
-
                 if possible_positions.is_empty() {
                     continue;
                 } else {
@@ -353,17 +421,26 @@ impl Generator {
 struct LpSolver;
 
 struct Variables {
-    is_placed: HashMap<(usize, usize, Item), Variable>,
+    is_placed: HashMap<(usize, usize, usize, Item), Variable>,
     is_affected: HashMap<(usize, usize), Variable>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct LevelSolution {
     level: Level,
     bombs: HashMap<(usize, usize), Item>,
     is_affected: Vec<Vec<bool>>,
 }
 
+impl LevelSolution {
+    fn count_affected_cells(&self) -> usize {
+        self.is_affected.iter().flatten().filter(|&&x| x).count()
+    }
+}
+
 impl LpSolver {
+    const MAX_DEPTH: usize = 10; // Maximum depth for the search
+
     const BOMBS: [Item; 4] = [
         Item::BombSmall,
         Item::BombMedium,
@@ -377,6 +454,7 @@ impl LpSolver {
         let objective = self.define_objective_function_minimum_bombs(level, &variables);
 
         let mut problem = vars.minimise(objective).using(default_solver);
+        problem.set_parameter("log", "0");
 
         self.define_constraints(&mut problem, level, &variables);
 
@@ -388,12 +466,13 @@ impl LpSolver {
         }
     }
 
-    fn solve_maximize_affected_areas(&self, level: &Level) -> Result<LevelSolution, Error> {
+    fn solve_minimal_affected_areas(&self, level: &Level) -> Result<LevelSolution, Error> {
         let (vars, variables) = self.define_variables(level);
 
         let objective = self.define_objective_function_affected_areas(level, &variables);
 
-        let mut problem = vars.maximise(objective).using(default_solver);
+        let mut problem = vars.minimise(objective).using(default_solver);
+        problem.set_parameter("log", "0");
 
         self.define_constraints(&mut problem, level, &variables);
 
@@ -412,15 +491,19 @@ impl LpSolver {
         let mut is_placed = HashMap::new();
         for x in 0..level.width {
             for y in 0..level.height {
-                for item in Self::BOMBS {
-                    is_placed.insert(
-                        (x, y, item),
-                        vars.add(
-                            variable()
-                                .binary()
-                                .name(format!("is_placed_{}_{}_{:?}", x, y, item)),
-                        ),
-                    );
+                for depth in 0..Self::MAX_DEPTH {
+                    // Create a variable for each bomb type at each position
+                    // The depth is not used in this example, but can be used for more complex scenarios
+                    for item in Self::BOMBS {
+                        is_placed.insert(
+                            (x, y, depth, item),
+                            vars.add(
+                                variable()
+                                    .binary()
+                                    .name(format!("is_placed_{}_{}_{}_{:?}", x, y, depth, item)),
+                            ),
+                        );
+                    }
                 }
             }
         }
@@ -454,9 +537,10 @@ impl LpSolver {
         for (x, y) in (0..level.width).flat_map(|x| (0..level.height).map(move |y| (x, y))) {
             let lhs = Self::BOMBS
                 .iter()
-                .fold(Expression::default(), |acc, &item| {
-                    acc + variables.is_placed[&(x, y, item)]
-                });
+                .flat_map(|&item| {
+                    (0..Self::MAX_DEPTH).map(move |depth| variables.is_placed[&(x, y, depth, item)])
+                })
+                .fold(Expression::default(), |acc, var| acc + var);
             problem.add_constraint(
                 lhs.leq(1.0.into_expression())
                     .set_name(format!("cell_{}_{}", x, y)),
@@ -464,14 +548,25 @@ impl LpSolver {
         }
 
         // already placed bombs
-        for (pos, &item) in &level.objects {
+        for (&pos, &item) in &level.objects {
             if item.is_bomb() {
-                problem.add_constraint(
-                    variables.is_placed[&(pos.0, pos.1, item)]
-                        .into_expression()
-                        .eq(1.0.into_expression())
-                        .set_name(format!("placed_bomb_{}_{}", pos.0, pos.1)),
-                );
+                if pos == level.fire {
+                    problem.add_constraint(
+                        variables.is_placed[&(pos.0, pos.1, 0, item)]
+                            .into_expression()
+                            .eq(1.0.into_expression())
+                            .set_name(format!("placed_bomb_{}_{}", pos.0, pos.1)),
+                    );
+                } else {
+                    problem.add_constraint(
+                        (1..Self::MAX_DEPTH)
+                            .fold(Expression::default(), |acc, depth| {
+                                acc + variables.is_placed[&(pos.0, pos.1, depth, item)]
+                            })
+                            .eq(1.0.into_expression())
+                            .set_name(format!("placed_bomb_at_{}_{}", pos.0, pos.1)),
+                    );
+                };
             }
         }
 
@@ -481,9 +576,11 @@ impl LpSolver {
                 problem.add_constraint(
                     Self::BOMBS
                         .iter()
-                        .fold(Expression::default(), |acc, &bomb| {
-                            acc + variables.is_placed[&(pos.0, pos.1, bomb)]
+                        .flat_map(|&bomb| {
+                            (0..Self::MAX_DEPTH)
+                                .map(move |depth| variables.is_placed[&(pos.0, pos.1, depth, bomb)])
                         })
+                        .fold(Expression::default(), |acc, var| acc + var)
                         .eq(0.0.into_expression())
                         .set_name(format!("no_bomb_at_{}_{}", pos.0, pos.1)),
                 );
@@ -491,9 +588,12 @@ impl LpSolver {
         }
 
         // bombs affect their impact zones
+        // lower bound
         for (x, y) in (0..level.width).flat_map(|x| (0..level.height).map(move |y| (x, y))) {
             for &item in &Self::BOMBS {
-                let bomb_var = variables.is_placed[&(x, y, item)];
+                let bomb_var = (0..Self::MAX_DEPTH).fold(Expression::default(), |acc, depth| {
+                    acc + variables.is_placed[&(x, y, depth, item)]
+                });
 
                 for &(dx, dy) in item.impact_zone() {
                     let affected_x = (x as i8 + dx) as usize;
@@ -505,7 +605,7 @@ impl LpSolver {
                         problem.add_constraint(
                             affected_var
                                 .into_expression()
-                                .geq(bomb_var.into_expression())
+                                .geq(bomb_var.clone())
                                 .set_name(format!(
                                     "{:?}_{}_{}_affects_{}_{}",
                                     item, x, y, affected_x, affected_y
@@ -514,6 +614,34 @@ impl LpSolver {
                     }
                 }
             }
+        }
+
+        // upper bound
+        for (x, y) in (0..level.width).flat_map(|x| (0..level.height).map(move |y| (x, y))) {
+            let parent_positions: Vec<_> = (0..level.width)
+                .flat_map(|px| (0..level.height).map(move |py| (px, py)))
+                .flat_map(|(px, py)| {
+                    Self::BOMBS
+                        .iter()
+                        .filter(move |&&item| check_is_position_affected((px, py), item, (x, y)))
+                        .map(move |&item| (px, py, item))
+                })
+                .flat_map(|(px, py, item)| {
+                    (0..Self::MAX_DEPTH).map(move |depth| (px, py, depth, item))
+                })
+                .collect();
+
+            problem.add_constraint(
+                variables.is_affected[&(x, y)]
+                    .into_expression()
+                    .leq(parent_positions.iter().fold(
+                        Expression::default(),
+                        |acc, &(px, py, depth, item)| {
+                            acc + variables.is_placed[&(px, py, depth, item)]
+                        },
+                    ))
+                    .set_name(format!("bombs_affecting_{}_{}", x, y)),
+            );
         }
 
         // rocks must be affected
@@ -543,30 +671,34 @@ impl LpSolver {
         }
 
         // if a bomb is not on fire, there must be at least one bomb affecting it
-        for (x, y) in (0..level.width).flat_map(|x| (0..level.height).map(move |y| (x, y))) {
+        for (x, y, depth) in (0..level.width)
+            .flat_map(|x| (0..level.height).map(move |y| (x, y)))
+            .flat_map(|(x, y)| (0..Self::MAX_DEPTH).map(move |depth| (x, y, depth)))
+        {
             if (x, y) == level.fire {
                 continue; // Skip the fire position
             }
 
             // position and items which can affect the position
-            let possible_parents: Vec<(usize, usize, Item)> = (0..level.width)
+            let possible_parents: Vec<(usize, usize, usize, Item)> = (0..level.width)
                 .flat_map(|x| (0..level.height).map(move |y| (x, y)))
                 .filter(|&(px, py)| (px, py) != (x, y))
                 .flat_map(|(px, py)| Self::BOMBS.iter().map(move |&item| (px, py, item)))
                 .filter(|&(px, py, item)| check_is_position_affected((px, py), item, (x, y)))
+                .flat_map(|(px, py, item)| (0..depth).map(move |depth| (px, py, depth, item)))
                 .collect();
 
             problem.add_constraint(
                 possible_parents
                     .iter()
-                    .fold(Expression::default(), |acc, &(px, py, item)| {
-                        acc + variables.is_placed[&(px, py, item)]
+                    .fold(Expression::default(), |acc, &(px, py, pdepth, item)| {
+                        acc + variables.is_placed[&(px, py, pdepth, item)]
                     })
                     .geq(
                         Self::BOMBS
                             .iter()
                             .fold(Expression::default(), |acc, &item| {
-                                acc + variables.is_placed[&(x, y, item)]
+                                acc + variables.is_placed[&(x, y, depth, item)]
                             })
                             .into_expression(),
                     )
@@ -599,6 +731,8 @@ impl LpSolver {
             .flat_map(|x| (0..level.height).map(move |y| (x, y)))
             .filter_map(|pos| variables.is_affected.get(&pos))
             .fold(Expression::default(), |acc, &var| acc + var)
+            * 100.0
+            + self.define_objective_function_minimum_bombs(level, variables)
     }
 
     fn build_solution<S: Solution>(
@@ -611,10 +745,12 @@ impl LpSolver {
         // This is a placeholder; actual implementation would involve calling an LP solver library
         let mut bombs = HashMap::new();
         for (x, y) in (0..level.width).flat_map(|x| (0..level.height).map(move |y| (x, y))) {
-            for &item in &Self::BOMBS {
-                let var = variables.is_placed[&(x, y, item)];
-                if solution.value(var) > 0.5 {
-                    bombs.insert((x, y), item);
+            for depth in 0..Self::MAX_DEPTH {
+                for &item in &Self::BOMBS {
+                    let var = variables.is_placed[&(x, y, depth, item)];
+                    if solution.value(var) > 0.5 && !level.objects.contains_key(&(x, y)) {
+                        bombs.insert((x, y), item);
+                    }
                 }
             }
         }
@@ -674,6 +810,20 @@ fn display_level(level: &Level) {
     println!("Fire at: {:?}", level.fire);
 }
 
+fn display_solution(solution: &LevelSolution) {
+    let LevelSolution {
+        mut level,
+        bombs,
+        is_affected,
+    } = solution.clone();
+
+    for ((x, y), item) in &bombs {
+        level.objects.insert((*x, *y), *item);
+    }
+
+    display_objects(&level);
+}
+
 fn display_objects(level: &Level) {
     for y in 0..level.height {
         for x in 0..level.width {
@@ -694,7 +844,7 @@ fn display_objects(level: &Level) {
             };
 
             let fire = if (x, y) == level.fire { "*" } else { "" };
-            print!(" {:?}{}", letter, fire);
+            print!(" {}{}", letter, fire);
         }
         println!();
     }
