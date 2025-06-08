@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 
 use crate::{
-    asset_tracking::LoadResource,
     audio::{SEVolume, SoundEffectAssets, sound_effect},
     theme::widget::{ItemButton, RunButton},
 };

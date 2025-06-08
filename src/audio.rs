@@ -1,4 +1,4 @@
-use bevy::{audio::Volume, ecs::resource, prelude::*};
+use bevy::{audio::Volume, prelude::*};
 
 use crate::asset_tracking::LoadResource;
 
