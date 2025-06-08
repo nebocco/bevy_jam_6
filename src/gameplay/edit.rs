@@ -117,7 +117,7 @@ fn spawn_controlflow_buttons(mut commands: Commands, ui_assets: Res<UiAssets>) {
         .insert(Node {
             position_type: PositionType::Absolute,
             align_items: AlignItems::Center,
-            justify_content: JustifyContent::SpaceBetween,
+            justify_content: JustifyContent::FlexEnd,
             height: Val::Percent(80.0),
             top: Val::Percent(10.0),
             left: Val::Percent(10.0),
