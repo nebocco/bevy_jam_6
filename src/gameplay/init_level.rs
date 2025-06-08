@@ -10,6 +10,7 @@ use bevy::{
     prelude::*,
 };
 use serde::{Deserialize, Serialize};
+use tracing::Level;
 
 use crate::{
     asset_tracking::LoadResource,
@@ -18,6 +19,7 @@ use crate::{
         edit::{CreateObject, SelectedItem, fire},
     },
     screens::Screen,
+    theme::widget::{self},
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -132,7 +134,7 @@ pub struct LevelLayout {
 #[derive(Debug, Clone, Reflect, Serialize, Deserialize)]
 pub struct LevelMetaData {
     pub name: Option<String>,
-    pub description: Option<String>,
+    pub message: Option<String>,
 }
 
 #[derive(Default)]
@@ -224,6 +226,25 @@ fn spawn_level(
         ))
         .with_children(|parent| spawn_grid(parent, bg_assets, item_assets, level_layout))
         .observe(reset_tint_colors_on_out);
+
+    if let Some(message) = level_layout.meta.message.as_ref() {
+        commands.spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                display: Display::Flex,
+                flex_direction: FlexDirection::Column,
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                width: Val::Percent(100.0),
+                height: Val::Percent(10.0),
+                bottom: Val::Px(20.0),
+                ..Default::default()
+            },
+            LevelBase,
+            children![widget::text(message),],
+            StateScoped(Screen::Gameplay),
+        ));
+    }
 }
 
 const CELL_SIZE_BASE: f32 = 32.0;

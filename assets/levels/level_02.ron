@@ -5,5 +5,7 @@
         (x:1, y:4): BombMedium
     },
     fire_coord: (x:0, y:1),
-    meta: ()
+    meta: (
+        message: Some("Break all the rocks."),
+    )
 )
