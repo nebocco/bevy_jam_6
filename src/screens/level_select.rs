@@ -1,13 +1,17 @@
 use bevy::{ecs::spawn::SpawnWith, prelude::*};
 
 use crate::{
+    audio::{MusicAssets, SpawnMusic},
     gameplay::{ClearedLevels, CurrentLevel, GamePhase, LevelAssets, move_to_level},
     screens::Screen,
     theme::{UiAssets, widget},
 };
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(OnEnter(Screen::LevelSelect), spawn_level_select_screen);
+    app.add_systems(
+        OnEnter(Screen::LevelSelect),
+        (spawn_level_select_screen, spawn_music),
+    );
 }
 
 fn spawn_level_select_screen(
@@ -25,6 +29,12 @@ fn spawn_level_select_screen(
             stage_select_button_grid(ui_assets, cleared_levels, level_assets)
         ],
     ));
+}
+
+fn spawn_music(mut commands: Commands, music_assets: Res<MusicAssets>) {
+    commands.trigger(SpawnMusic::new(Handle::clone(
+        &music_assets.level_select_bgm,
+    )));
 }
 
 #[derive(Debug, Clone, Copy, Default)]

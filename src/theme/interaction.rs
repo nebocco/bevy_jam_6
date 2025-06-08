@@ -1,6 +1,9 @@
 use bevy::prelude::*;
 
-use crate::{asset_tracking::LoadResource, audio::sound_effect};
+use crate::{
+    asset_tracking::LoadResource,
+    audio::{SEVolume, sound_effect},
+};
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<InteractionPalette>();
@@ -66,13 +69,14 @@ fn play_on_hover_sound_effect(
     mut commands: Commands,
     interaction_assets: Option<Res<InteractionAssets>>,
     interaction_query: Query<(), With<Interaction>>,
+    se_volume: Res<SEVolume>,
 ) {
     let Some(interaction_assets) = interaction_assets else {
         return;
     };
 
     if interaction_query.contains(trigger.target()) {
-        commands.spawn(sound_effect(interaction_assets.hover.clone()));
+        commands.spawn(sound_effect(interaction_assets.hover.clone(), &se_volume));
     }
 }
 
@@ -81,13 +85,14 @@ fn play_on_click_sound_effect(
     mut commands: Commands,
     interaction_assets: Option<Res<InteractionAssets>>,
     interaction_query: Query<(), With<Interaction>>,
+    se_volume: Res<SEVolume>,
 ) {
     let Some(interaction_assets) = interaction_assets else {
         return;
     };
 
     if interaction_query.contains(trigger.target()) {
-        commands.spawn(sound_effect(interaction_assets.click.clone()));
+        commands.spawn(sound_effect(interaction_assets.click.clone(), &se_volume));
     }
 }
 

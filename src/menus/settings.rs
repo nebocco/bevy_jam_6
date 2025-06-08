@@ -4,7 +4,12 @@
 
 use bevy::{audio::Volume, input::common_conditions::input_just_pressed, prelude::*, ui::Val::*};
 
-use crate::{menus::Menu, screens::Screen, theme::prelude::*};
+use crate::{
+    audio::{MusicVolume, SEVolume},
+    menus::Menu,
+    screens::Screen,
+    theme::prelude::*,
+};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Menu::Settings), spawn_settings_menu);
@@ -13,11 +18,12 @@ pub(super) fn plugin(app: &mut App) {
         go_back.run_if(in_state(Menu::Settings).and(input_just_pressed(KeyCode::Escape))),
     );
 
-    app.register_type::<GlobalVolumeLabel>();
-    app.init_resource::<SEVolume>();
+    app.register_type::<MusicVolumeLabel>()
+        .register_type::<SEVolumeLabel>();
+
     app.add_systems(
         Update,
-        (update_global_volume_label, update_se_volume_label).run_if(in_state(Menu::Settings)),
+        (update_music_volume_label, update_se_volume_label).run_if(in_state(Menu::Settings)),
     );
 }
 
@@ -46,15 +52,15 @@ fn settings_grid() -> impl Bundle {
         },
         children![
             (
-                widget::label("Master Volume"),
+                widget::label("Music"),
                 Node {
                     justify_self: JustifySelf::End,
                     ..default()
                 }
             ),
-            global_volume_widget(),
+            music_volume_widget(),
             (
-                widget::label("Sound Effects Volume"),
+                widget::label("Sound Effects"),
                 Node {
                     justify_self: JustifySelf::End,
                     ..default()
@@ -65,15 +71,15 @@ fn settings_grid() -> impl Bundle {
     )
 }
 
-fn global_volume_widget() -> impl Bundle {
+fn music_volume_widget() -> impl Bundle {
     (
-        Name::new("Global Volume Widget"),
+        Name::new("Music Volume Widget"),
         Node {
             justify_self: JustifySelf::Start,
             ..default()
         },
         children![
-            widget::button_small("-", lower_global_volume),
+            widget::button_small("-", lower_music_volume),
             (
                 Name::new("Current Volume"),
                 Node {
@@ -81,9 +87,9 @@ fn global_volume_widget() -> impl Bundle {
                     justify_content: JustifyContent::Center,
                     ..default()
                 },
-                children![(widget::label(""), GlobalVolumeLabel)],
+                children![(widget::label(""), MusicVolumeLabel)],
             ),
-            widget::button_small("+", raise_global_volume),
+            widget::button_small("+", raise_music_volume),
         ],
     )
 }
@@ -114,20 +120,14 @@ fn se_volume_widget() -> impl Bundle {
 const MIN_VOLUME: f32 = 0.0;
 const MAX_VOLUME: f32 = 3.0;
 
-fn lower_global_volume(_: Trigger<Pointer<Click>>, mut global_volume: ResMut<GlobalVolume>) {
-    let linear = (global_volume.volume.to_linear() - 0.1).max(MIN_VOLUME);
-    global_volume.volume = Volume::Linear(linear);
+fn lower_music_volume(_: Trigger<Pointer<Click>>, mut music_volume: ResMut<MusicVolume>) {
+    let linear = (music_volume.volume.to_linear() - 0.1).max(MIN_VOLUME);
+    music_volume.volume = Volume::Linear(linear);
 }
 
-fn raise_global_volume(_: Trigger<Pointer<Click>>, mut global_volume: ResMut<GlobalVolume>) {
-    let linear = (global_volume.volume.to_linear() + 0.1).min(MAX_VOLUME);
-    global_volume.volume = Volume::Linear(linear);
-}
-
-#[derive(Resource, Reflect, Debug, Default)]
-#[reflect(Resource)]
-struct SEVolume {
-    volume: Volume,
+fn raise_music_volume(_: Trigger<Pointer<Click>>, mut music_volume: ResMut<MusicVolume>) {
+    let linear = (music_volume.volume.to_linear() + 0.1).min(MAX_VOLUME);
+    music_volume.volume = Volume::Linear(linear);
 }
 
 fn lower_se_volume(_: Trigger<Pointer<Click>>, mut se_volume: ResMut<SEVolume>) {
@@ -142,17 +142,17 @@ fn raise_se_volume(_: Trigger<Pointer<Click>>, mut se_volume: ResMut<SEVolume>) 
 
 #[derive(Component, Reflect)]
 #[reflect(Component)]
-struct GlobalVolumeLabel;
+struct MusicVolumeLabel;
 
 #[derive(Component, Reflect, Debug)]
 #[reflect(Component)]
 struct SEVolumeLabel;
 
-fn update_global_volume_label(
-    global_volume: Res<GlobalVolume>,
-    mut label: Single<&mut Text, With<GlobalVolumeLabel>>,
+fn update_music_volume_label(
+    music_volume: Res<MusicVolume>,
+    mut label: Single<&mut Text, With<MusicVolumeLabel>>,
 ) {
-    let percent = 100.0 * global_volume.volume.to_linear();
+    let percent = 100.0 * music_volume.volume.to_linear();
     label.0 = format!("{percent:3.0}%");
 }
 

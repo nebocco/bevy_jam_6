@@ -2,13 +2,25 @@
 
 use bevy::prelude::*;
 
-use crate::{gameplay::BgAssets, menus::Menu, screens::Screen, theme::palette::*};
+use crate::{
+    audio::{MusicAssets, SpawnMusic},
+    gameplay::BgAssets,
+    menus::Menu,
+    screens::Screen,
+    theme::palette::*,
+};
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(OnEnter(Screen::Title), (open_main_menu, set_background));
+    app.add_systems(
+        OnEnter(Screen::Title),
+        (open_main_menu, set_background, spawn_music),
+    );
     app.add_systems(OnExit(Screen::Title), close_menu);
 }
 
+fn spawn_music(mut commands: Commands, music_assets: Res<MusicAssets>) {
+    commands.trigger(SpawnMusic::new(Handle::clone(&music_assets.title_bgm)));
+}
 fn open_main_menu(mut next_menu: ResMut<NextState<Menu>>) {
     next_menu.set(Menu::Main);
 }
