@@ -46,12 +46,12 @@ fn compare_two_solver() {
     let seed = 42; // Example seed, can be any u64 value
     let mut generator = Generator::new(seed);
 
-    const ITER_COUNT: usize = 3;
+    const ITER_COUNT: usize = 50;
 
     let m = MultiProgress::new();
     let pb_outer = m.add(indicatif::ProgressBar::new(4));
 
-    for aside in (6..10).progress() {
+    for aside in 5..8 {
         let pb_inner = m.add(indicatif::ProgressBar::new(ITER_COUNT as u64));
         pb_outer.inc(1);
         for i in 0..ITER_COUNT {
@@ -108,6 +108,9 @@ fn compare_two_solver() {
                 solution2.count_affected_cells()
             );
             display_solution(&solution2);
+
+            let level_str = ron::ser::to_string(&level).unwrap();
+            println!("Level RON: {}", level_str);
         }
         pb_inner.finish();
     }
@@ -334,7 +337,7 @@ impl Generator {
     fn generate_random_level(&mut self, width: usize, height: usize) -> Result<Level, ()> {
         let mut objects = HashMap::new();
 
-        let object_num = ((width * height) / 10 + self.rng.random_range(0..5))
+        let object_num = ((width * height) / 8 + self.rng.random_range(0..5))
             .saturating_sub(self.rng.random_range(0..5))
             .clamp(4, 12);
         self.genrate_objects(&mut objects, object_num, (width, height));
@@ -394,10 +397,10 @@ impl Generator {
     ) {
         for _ in 0..bomb_num {
             for _retry_count in 0..100 {
-                let item = match self.rng.random_range(0..4) {
-                    0 => Item::BombSmall,
-                    1 => Item::BombMedium,
-                    2 => Item::BombHorizontal,
+                let item = match self.rng.random_range(0..7) {
+                    0..3 => Item::BombSmall,
+                    3..5 => Item::BombMedium,
+                    5 => Item::BombHorizontal,
                     _ => Item::BombVertical,
                 };
 
