@@ -11,7 +11,7 @@
         (x:4, y:1): Rock,
         (x:4, y:3): Rock,
     },
-    fire_coord: (x:0, y:1),
+    fire_coord: (x:2, y:2),
     meta: (
         name: "Symmetry",
         min_bombs: 200,
