@@ -45,7 +45,7 @@ pub fn explosion(
 ) {
     if trigger.item.is_bomb() {
         explode_bomb(&mut commands, trigger.parent_entity, &asset, fire_query);
-    } else if trigger.item == Item::Rock || trigger.item == Item::Gem {
+    } else if trigger.item == Item::Rock || trigger.item == Item::Jewel {
         let mut entity_builder = commands.entity(trigger.parent_entity);
         explode_object(&mut entity_builder, trigger.item, &asset);
     } else {
@@ -99,8 +99,8 @@ fn explode_object(entity_builder: &mut EntityCommands, item: Item, asset: &Explo
         .and_modify(move |mut sprite| {
             sprite.texture_atlas.iter_mut().for_each(|atlas| {
                 atlas.index = match item {
-                    Item::Rock => 9, // index for destroyed rock
-                    Item::Gem => 11, // index for destroyed gem
+                    Item::Rock => 9,   // index for destroyed rock
+                    Item::Jewel => 11, // index for destroyed gem
                     _ => unreachable!(),
                 };
             });

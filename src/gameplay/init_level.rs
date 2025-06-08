@@ -10,7 +10,6 @@ use bevy::{
     prelude::*,
 };
 use serde::{Deserialize, Serialize};
-use tracing::Level;
 
 use crate::{
     asset_tracking::LoadResource,

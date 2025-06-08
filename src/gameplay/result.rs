@@ -64,7 +64,7 @@ fn compute_game_result(
         | Item::BombHorizontal
         | Item::BombVertical => state == ItemState::Burned,
         Item::Rock => state == ItemState::Burned,
-        Item::Gem => state == ItemState::None,
+        Item::Jewel => state == ItemState::None,
         Item::Enemy => state == ItemState::Burned,
         _ => true, // Other items are not relevant for the result
     });
