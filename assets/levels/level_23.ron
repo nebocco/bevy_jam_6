@@ -1,0 +1,21 @@
+(
+    board_size: (6, 7),
+    objects: {
+        (x:3, y:5): Rock,
+        (x:0, y:0): Rock,
+        (x:5, y:3): Jewel,
+        (x:5, y:1): Rock,
+        (x:2, y:2): Jewel,
+        (x:1, y:0): BombHorizontal,
+        (x:4, y:4): Rock,
+        (x:4, y:5): Jewel,
+        (x:1, y:1): Rock,
+        (x:3, y:2): Jewel,
+    },
+    fire_coord: (x:1, y:0),
+    meta: (
+        name: "Miner",
+        min_bombs: 5,
+        min_affected_cells: 27,
+    )
+)

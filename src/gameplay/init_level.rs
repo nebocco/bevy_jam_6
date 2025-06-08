@@ -194,6 +194,12 @@ impl FromWorld for LevelAssets {
                 assets.load("levels/level_06.ron"),
                 assets.load("levels/level_07.ron"),
                 assets.load("levels/level_08.ron"),
+                assets.load("levels/level_11.ron"),
+                assets.load("levels/level_20.ron"),
+                assets.load("levels/level_21.ron"),
+                assets.load("levels/level_22.ron"),
+                assets.load("levels/level_23.ron"),
+                assets.load("levels/level_24.ron"),
             ],
         }
     }
