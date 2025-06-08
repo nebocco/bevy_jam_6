@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 
 use crate::{
+    audio::{self, SEVolume, SoundEffectAssets, sound_effect},
     gameplay::{CurrentLevel, GamePhase, Item, ItemState, LevelAssets, LevelLayout},
     screens::Screen,
     theme::{UiAssets, widget},
@@ -17,6 +18,7 @@ pub(super) fn plugin(app: &mut App) {
             compute_game_result,
             record_cleated_levels,
             init_result_state,
+            audio::stop_music,
         )
             .chain(),
     );
@@ -127,7 +129,13 @@ fn record_cleated_levels(
     };
 }
 
-fn init_result_state(mut commands: Commands, result: Res<GameResult>, ui_assets: Res<UiAssets>) {
+fn init_result_state(
+    mut commands: Commands,
+    result: Res<GameResult>,
+    ui_assets: Res<UiAssets>,
+    se_assets: Option<Res<SoundEffectAssets>>,
+    se_volume: Res<SEVolume>,
+) {
     // create UI node for graying out the whole screen
 
     let mut entity = commands.spawn((
@@ -143,12 +151,20 @@ fn init_result_state(mut commands: Commands, result: Res<GameResult>, ui_assets:
             widget::text_button("Select Level", &ui_assets, go_level_select),
             widget::text_button("Next Level", &ui_assets, next_level),
         ]);
+
+        if let Some(se_assets) = se_assets {
+            commands.spawn(sound_effect(se_assets.clear.clone(), &se_volume));
+        }
     } else {
         entity.insert(children![
             widget::header("Level Failed..."),
-            widget::text_button("Home", &ui_assets, go_level_select),
+            widget::text_button("Select Level", &ui_assets, go_level_select),
             widget::text_button("Retry", &ui_assets, retry_level),
         ]);
+
+        if let Some(se_assets) = se_assets {
+            commands.spawn(sound_effect(se_assets.failed.clone(), &se_volume));
+        }
     }
 }
 

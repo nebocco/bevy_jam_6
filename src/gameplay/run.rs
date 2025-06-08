@@ -3,6 +3,7 @@ use std::{collections::HashMap, fmt::Debug};
 use bevy::{color::palettes, prelude::*};
 
 use crate::{
+    audio::{SEVolume, SoundEffectAssets, sound_effect},
     gameplay::{
         GamePhase, GridCoord, Item, ItemState,
         animation::AffectedTileAnimation,
@@ -124,6 +125,8 @@ fn tick_simulation(
     mut burning_stack: ResMut<BurningStack>,
     mut query: Query<&mut ItemState>,
     mut tile_query: Query<(Entity, &GridCoord), With<GridTile>>,
+    se_assets: Option<Res<SoundEffectAssets>>,
+    se_volume: Res<SEVolume>,
 ) {
     running_state.tick += 1;
     println!("Tick: {}", running_state.tick);
@@ -177,6 +180,16 @@ fn tick_simulation(
         running_state.object_map.remove(coord);
     });
 
+    // SE
+    if let Some(se_assets) = se_assets.as_ref() {
+        if !affected_items.is_empty() {
+            commands.spawn(sound_effect(
+                Handle::clone(&se_assets.explosion_1),
+                &se_volume,
+            ));
+        }
+    }
+
     // explode animation
     filtered_burning_stack
         .iter()
@@ -190,6 +203,16 @@ fn tick_simulation(
                 parent_entity: entity,
             });
         });
+
+    // SE
+    if let Some(se_assets) = se_assets {
+        if !filtered_burning_stack.is_empty() {
+            commands.spawn(sound_effect(
+                Handle::clone(&se_assets.explosion_2),
+                &se_volume,
+            ));
+        }
+    }
 
     // set fire animation for affected bombs
     affected_bombs.iter().for_each(|&(coord, _item, entity)| {

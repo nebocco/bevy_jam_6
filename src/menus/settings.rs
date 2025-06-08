@@ -8,7 +8,7 @@ use crate::{
     audio::{MusicVolume, SEVolume},
     menus::Menu,
     screens::Screen,
-    theme::prelude::*,
+    theme::{UiAssets, prelude::*},
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -27,20 +27,20 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-fn spawn_settings_menu(mut commands: Commands) {
+fn spawn_settings_menu(mut commands: Commands, ui_assets: Res<UiAssets>) {
     commands.spawn((
         widget::ui_root("Settings Menu"),
         GlobalZIndex(2),
         StateScoped(Menu::Settings),
         children![
             widget::header("Settings"),
-            settings_grid(),
-            widget::button("Back", go_back_on_click),
+            settings_grid(&ui_assets),
+            widget::text_button("Back", &ui_assets, go_back_on_click),
         ],
     ));
 }
 
-fn settings_grid() -> impl Bundle {
+fn settings_grid(ui_assets: &UiAssets) -> impl Bundle {
     (
         Name::new("Settings Grid"),
         Node {
@@ -58,7 +58,7 @@ fn settings_grid() -> impl Bundle {
                     ..default()
                 }
             ),
-            music_volume_widget(),
+            music_volume_widget(ui_assets),
             (
                 widget::label("Sound Effects"),
                 Node {
@@ -66,12 +66,12 @@ fn settings_grid() -> impl Bundle {
                     ..default()
                 }
             ),
-            se_volume_widget(),
+            se_volume_widget(ui_assets),
         ],
     )
 }
 
-fn music_volume_widget() -> impl Bundle {
+fn music_volume_widget(ui_assets: &UiAssets) -> impl Bundle {
     (
         Name::new("Music Volume Widget"),
         Node {
@@ -79,7 +79,7 @@ fn music_volume_widget() -> impl Bundle {
             ..default()
         },
         children![
-            widget::button_small("-", lower_music_volume),
+            widget::button_small("-", ui_assets, lower_music_volume),
             (
                 Name::new("Current Volume"),
                 Node {
@@ -89,12 +89,12 @@ fn music_volume_widget() -> impl Bundle {
                 },
                 children![(widget::label(""), MusicVolumeLabel)],
             ),
-            widget::button_small("+", raise_music_volume),
+            widget::button_small("+", ui_assets, raise_music_volume),
         ],
     )
 }
 
-fn se_volume_widget() -> impl Bundle {
+fn se_volume_widget(ui_assets: &UiAssets) -> impl Bundle {
     (
         Name::new("SE Volume Widget"),
         Node {
@@ -102,7 +102,7 @@ fn se_volume_widget() -> impl Bundle {
             ..default()
         },
         children![
-            widget::button_small("-", lower_se_volume),
+            widget::button_small("-", ui_assets, lower_se_volume),
             (
                 Name::new("Current SE Volume"),
                 Node {
@@ -112,7 +112,7 @@ fn se_volume_widget() -> impl Bundle {
                 },
                 children![(widget::label(""), SEVolumeLabel)],
             ),
-            widget::button_small("+", raise_se_volume),
+            widget::button_small("+", ui_assets, raise_se_volume),
         ],
     )
 }

@@ -352,6 +352,62 @@ pub fn menu_button(ui_assets: &UiAssets) -> impl Bundle {
     )
 }
 
+/// A small square button with text and an action defined as an [`Observer`].
+pub fn button_small<E, B, M, I>(
+    text: impl Into<String>,
+    ui_assets: &UiAssets,
+    action: I,
+) -> impl Bundle
+where
+    E: Event,
+    B: Bundle,
+    I: IntoObserverSystem<E, B, M>,
+{
+    let text = text.into();
+    let texture_handle = Handle::clone(&ui_assets.ui_texture);
+    let layout = Handle::clone(&ui_assets.texture_atlas_layout);
+    let action = IntoObserverSystem::into_system(action);
+    (
+        Name::new("Button"),
+        Node::default(),
+        Children::spawn(SpawnWith(|parent: &mut ChildSpawner| {
+            parent
+                .spawn((
+                    Name::new("Button Inner"),
+                    Button,
+                    Node {
+                        width: Px(32.0),
+                        height: Px(32.0),
+                        align_items: AlignItems::Center,
+                        justify_content: JustifyContent::Center,
+                        ..default()
+                    },
+                    ImageNode::from_atlas_image(texture_handle, TextureAtlas { layout, index: 1 })
+                        .with_mode(NodeImageMode::Sliced(TextureSlicer {
+                            border: BorderRect::all(12.0),
+                            center_scale_mode: SliceScaleMode::Stretch,
+                            sides_scale_mode: SliceScaleMode::Stretch,
+                            max_corner_scale: 4.0,
+                        })),
+                    InteractionImagePalette {
+                        none: Color::Srgba(palettes::css::WHITE),
+                        hovered: Color::Srgba(palettes::css::THISTLE),
+                        pressed: Color::Srgba(palettes::css::PLUM.with_alpha(0.5)),
+                    },
+                    children![(
+                        Name::new("Button Text"),
+                        Text(text),
+                        TextFont::from_font_size(40.0),
+                        TextColor(BUTTON_TEXT),
+                        // Don't bubble picking events from the text up to the button.
+                        Pickable::IGNORE,
+                    )],
+                ))
+                .observe(action);
+        })),
+    )
+}
+
 /// A large rounded button with text and an action defined as an [`Observer`].
 pub fn button<E, B, M, I>(text: impl Into<String>, action: I) -> impl Bundle
 where
@@ -372,26 +428,6 @@ where
             },
             BorderRadius::MAX,
         ),
-    )
-}
-
-/// A small square button with text and an action defined as an [`Observer`].
-pub fn button_small<E, B, M, I>(text: impl Into<String>, action: I) -> impl Bundle
-where
-    E: Event,
-    B: Bundle,
-    I: IntoObserverSystem<E, B, M>,
-{
-    button_base(
-        text,
-        action,
-        Node {
-            width: Px(30.0),
-            height: Px(30.0),
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::Center,
-            ..default()
-        },
     )
 }
 
