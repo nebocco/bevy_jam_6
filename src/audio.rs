@@ -200,7 +200,7 @@ fn fade_out(
 
 pub fn stop_music(mut commands: Commands, audio_sink: Query<Entity, With<Music>>) {
     for entity in audio_sink.iter() {
-        commands.entity(entity).remove::<FadeIn>().insert(FadeOut);
+        commands.entity(entity).insert(FadeOut);
     }
 }
 
