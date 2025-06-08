@@ -62,16 +62,16 @@ fn menu_buttons(ui_assets: &UiAssets) -> impl Bundle {
         },
         #[cfg(not(target_family = "wasm"))]
         children![
-            widget::text_button("Play", &ui_assets, enter_loading_or_gameplay_screen),
-            widget::text_button("Settings", &ui_assets, open_settings_menu),
-            widget::text_button("Credits", &ui_assets, open_credits_menu),
-            widget::text_button("Exit", &ui_assets, exit_app),
+            widget::text_button("Play", ui_assets, enter_loading_or_gameplay_screen),
+            widget::text_button("Settings", ui_assets, open_settings_menu),
+            widget::text_button("Credits", ui_assets, open_credits_menu),
+            widget::text_button("Exit", ui_assets, exit_app),
         ],
         #[cfg(target_family = "wasm")]
         children![
-            widget::text_button("Play", &ui_assets, enter_loading_or_gameplay_screen),
-            widget::text_button("Settings", &ui_assets, open_settings_menu),
-            widget::text_button("Credits", &ui_assets, open_credits_menu),
+            widget::text_button("Play", ui_assets, enter_loading_or_gameplay_screen),
+            widget::text_button("Settings", ui_assets, open_settings_menu),
+            widget::text_button("Credits", ui_assets, open_credits_menu),
         ],
     )
 }
