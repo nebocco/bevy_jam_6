@@ -1,0 +1,24 @@
+(
+    board_size: (8, 8),
+    objects: {
+        (x:6, y:2): Jewel,
+        (x:3, y:4): BombHorizontal,
+        (x:0, y:3): Jewel,
+        (x:7, y:2): Rock,
+        (x:0, y:0): Rock,
+        (x:5, y:4): Rock,
+        (x:2, y:3): Rock,
+        (x:2, y:6): Jewel,
+        (x:5, y:3): Jewel,
+        (x:4, y:5): BombMedium,
+        (x:0, y:7): BombSmall,
+        (x:4, y:6): Rock,
+        (x:7, y:7): Rock,
+    },
+    fire_coord: (x:0, y:7),
+    meta: (
+        name: "Butterfly Effect",
+        min_bombs: 5,
+        min_affected_cells: 40,
+    )
+)

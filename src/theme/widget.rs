@@ -35,6 +35,38 @@ pub fn ui_root(name: impl Into<Cow<'static, str>>) -> impl Bundle {
 }
 
 /// A simple header label. Bigger than [`label`].
+pub fn title(text: impl Into<String>, font: Handle<Font>) -> impl Bundle {
+    (
+        Name::new("Header"),
+        Text(text.into()),
+        TextFont::from_font(font).with_font_size(144.0),
+        TextColor(HEADER_TEXT),
+        Pickable::IGNORE,
+    )
+}
+
+pub fn title_logo(ui_assets: &UiAssets) -> impl Bundle {
+    (
+        Name::new("Title Logo"),
+        Node {
+            width: Px(144.0),
+            height: Px(144.0),
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            ..default()
+        },
+        ImageNode::from_atlas_image(
+            Handle::clone(&ui_assets.ui_texture),
+            TextureAtlas {
+                layout: Handle::clone(&ui_assets.texture_atlas_layout),
+                index: 8,
+            },
+        )
+        .with_mode(NodeImageMode::Stretch),
+    )
+}
+
+/// A simple header label. Bigger than [`label`].
 pub fn header(text: impl Into<String>, font: Handle<Font>) -> impl Bundle {
     (
         Name::new("Header"),

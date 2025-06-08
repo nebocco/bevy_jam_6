@@ -1,0 +1,21 @@
+(
+    board_size: (6, 6),
+    objects: {
+        (x:3, y:5): Rock,
+        (x:2, y:1): Jewel,
+        (x:0, y:4): Jewel,
+        (x:3, y:3): Rock,
+        (x:5, y:5): Rock,
+        (x:2, y:4): Jewel,
+        (x:1, y:2): Rock,
+        (x:5, y:2): BombSmall,
+        (x:4, y:2): BombMedium,
+        (x:0, y:0): Rock,
+    },
+    fire_coord: (x:5, y:2),
+    meta: (
+        name: "Triplet",
+        min_bombs: 3,
+        min_affected_cells: 23,
+    )
+)

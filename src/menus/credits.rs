@@ -24,7 +24,8 @@ fn spawn_credits_menu(mut commands: Commands, ui_assets: Res<UiAssets>) {
         StateScoped(Menu::Credits),
         children![
             widget::header("Created by", Handle::clone(&ui_assets.font)),
-            created_by(&ui_assets),
+            // created_by(&ui_assets),
+            widget::text("nebocco", Handle::clone(&ui_assets.font)),
             widget::header("Assets", Handle::clone(&ui_assets.font)),
             assets(&ui_assets),
             widget::text_button("Back", &ui_assets, go_back_on_click),
@@ -32,26 +33,13 @@ fn spawn_credits_menu(mut commands: Commands, ui_assets: Res<UiAssets>) {
     ));
 }
 
-fn created_by(ui_assets: &UiAssets) -> impl Bundle {
-    grid(
-        vec![
-            ["Joe Shmoe", "Implemented alligator wrestling AI"],
-            ["Jane Doe", "Made the music for the alien invasion"],
-        ],
-        ui_assets,
-    )
-}
-
 fn assets(ui_assets: &UiAssets) -> impl Bundle {
     grid(
         vec![
-            ["Ducky sprite", "CC0 by Caz Creates Games"],
-            ["Button SFX", "CC0 by Jaszunio15"],
-            ["Music", "CC BY 3.0 by Kevin MacLeod"],
-            [
-                "Bevy logo",
-                "All rights reserved by the Bevy Foundation, permission granted for splash screen use when unmodified",
-            ],
+            ["Music", "by ansimuz"],
+            ["SFX", "created with jsfxr, by Chris McCormick"],
+            ["Sprite Animation", "by Bdragon1727"],
+            ["Fonts", "by Daniel Linssen"],
         ],
         ui_assets,
     )
@@ -71,7 +59,7 @@ fn grid(content: Vec<[&'static str; 2]>, ui_assets: &UiAssets) -> impl Bundle {
         Children::spawn(SpawnIter(content.into_iter().flatten().enumerate().map(
             move |(i, text)| {
                 (
-                    widget::label(text, Some(Handle::clone(&font_handle))),
+                    widget::text(text, Handle::clone(&font_handle)),
                     Node {
                         justify_self: if i % 2 == 0 {
                             JustifySelf::End

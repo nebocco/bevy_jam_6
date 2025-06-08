@@ -207,6 +207,14 @@ fn init_result_state(
     if result.is_cleared {
         entity.insert(children![
             widget::header("Level Cleared!", Handle::clone(&ui_assets.font)),
+            widget::text(
+                format!("Used Bombs: {}", result.used_bomb_count),
+                Handle::clone(&ui_assets.font)
+            ),
+            widget::text(
+                format!("Affected Cells: {}", result.affected_cell_count),
+                Handle::clone(&ui_assets.font)
+            ),
             widget::text_button("Select Level", &ui_assets, go_level_select),
             widget::text_button("Next Level", &ui_assets, next_level),
         ]);

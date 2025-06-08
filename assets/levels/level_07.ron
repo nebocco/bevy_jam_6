@@ -14,7 +14,7 @@
     fire_coord: (x:3, y:3),
     meta: (
         name: "Asymmetry",
-        min_bombs: 200,
-        min_affected_cells: 200,
+        min_bombs: 4,
+        min_affected_cells: 19,
     )
 )
