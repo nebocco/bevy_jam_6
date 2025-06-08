@@ -856,20 +856,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bevy_jam_6"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bevy",
- "bevy_asset_loader",
- "log",
- "rand",
- "ron 0.10.1",
- "serde",
- "tracing",
-]
-
-[[package]]
 name = "bevy_log"
 version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1508,6 +1494,20 @@ dependencies = [
  "futures-io",
  "futures-lite",
  "piper",
+]
+
+[[package]]
+name = "bombombo"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bevy",
+ "bevy_asset_loader",
+ "log",
+ "rand",
+ "ron 0.10.1",
+ "serde",
+ "tracing",
 ]
 
 [[package]]
