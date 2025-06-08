@@ -37,23 +37,16 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-#[derive(Component, Reflect, Debug)]
-#[reflect(Component)]
-pub struct LevelUIBase;
-
 fn spawn_item_buttons(
     mut commands: Commands,
-    // base_entity_query: Query<Entity, With<LevelBase>>,
     item_assets: Res<ItemAssets>,
     ui_assets: Res<UiAssets>,
 ) {
-    let ui_assets = ui_assets.clone();
-    let entity = commands
+    commands
         .spawn((
             widget::ui_root("Item Buttons"),
             GlobalZIndex(0),
-            // LevelBase,
-            LevelUIBase,
+            LevelBase,
             StateScoped(Screen::Gameplay),
             children![
                 widget::item_button(
@@ -109,26 +102,15 @@ fn spawn_item_buttons(
             row_gap: Val::Px(16.0),
             left: Val::Percent(80.0),
             ..Default::default()
-        })
-        .id();
-
-    // let base_entity = base_entity_query
-    //     .single()
-    //     .expect("Expected a single LevelBase entity");
-    // commands.entity(base_entity).add_child(entity);
+        });
 }
 
-fn spawn_controlflow_buttons(
-    mut commands: Commands,
-    ui_assets: Res<UiAssets>,
-    // base_entity_query: Query<Entity, With<LevelBase>>,
-) {
-    let entity = commands
+fn spawn_controlflow_buttons(mut commands: Commands, ui_assets: Res<UiAssets>) {
+    commands
         .spawn((
             widget::ui_root("Control Flow Buttons"),
             GlobalZIndex(0),
-            // LevelBase,
-            LevelUIBase,
+            LevelBase,
             StateScoped(Screen::Gameplay),
         ))
         .insert(Node {
@@ -145,13 +127,7 @@ fn spawn_controlflow_buttons(
         .with_children(|parent| {
             // parent.spawn(widget::menu_button(&ui_assets));
             parent.spawn(widget::run_button(&ui_assets, run_simulation_with_button));
-        })
-        .id();
-
-    // let base_entity = base_entity_query
-    //     .single()
-    //     .expect("Expected a single LevelBase entity");
-    // commands.entity(base_entity).add_child(entity);
+        });
 }
 
 fn init_edit_state(mut selected_item: ResMut<SelectedItem>) {

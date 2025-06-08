@@ -7,7 +7,7 @@ use crate::{
         GamePhase, GridCoord, Item, ItemState,
         animation::AffectedTileAnimation,
         edit::{Fire, SelectedItem, fire},
-        init_level::{GridTile, ItemAssets},
+        init_level::{GridTile, ItemAssets, reset_tint_colors},
     },
     theme::{
         interaction::InteractionImagePalette,
@@ -18,10 +18,13 @@ use crate::{
 pub(super) fn plugin(app: &mut App) {
     app.init_resource::<RunningState>()
         .init_resource::<BurningStack>()
-        .insert_resource(RunningTimer(Timer::from_seconds(1.0, TimerMode::Repeating)));
-    app.add_systems(OnEnter(GamePhase::Run), (disable_buttons, init_run_state))
-        .add_systems(Update, tick_timer.run_if(in_state(GamePhase::Run)))
-        .add_observer(tick_simulation);
+        .insert_resource(RunningTimer(Timer::from_seconds(1.2, TimerMode::Repeating)));
+    app.add_systems(
+        OnEnter(GamePhase::Run),
+        (disable_buttons, reset_tint_colors, init_run_state),
+    )
+    .add_systems(Update, tick_timer.run_if(in_state(GamePhase::Run)))
+    .add_observer(tick_simulation);
 }
 
 #[derive(Resource, Debug, Clone, PartialEq, Default)]
@@ -81,16 +84,11 @@ fn init_run_state(
 fn disable_buttons(
     mut commands: Commands,
     mut selected_item: ResMut<SelectedItem>,
-    mut item_buttons: Query<Entity, With<ItemButton>>,
-    mut run_buttons: Query<(&mut ImageNode, Entity), (With<RunButton>, Without<ItemButton>)>,
+    mut buttons: Query<(&mut ImageNode, Entity), Or<(With<ItemButton>, With<RunButton>)>>,
 ) {
     selected_item.0 = None; // Reset selected item
 
-    for entity in item_buttons.iter_mut() {
-        commands.entity(entity).remove::<InteractionImagePalette>();
-    }
-
-    for (mut image_node, entity) in run_buttons.iter_mut() {
+    for (mut image_node, entity) in buttons.iter_mut() {
         image_node
             .texture_atlas
             .iter_mut()

@@ -17,7 +17,7 @@ pub(super) fn plugin(app: &mut App) {
     app.init_resource::<SEVolume>();
     app.add_systems(
         Update,
-        update_global_volume_label.run_if(in_state(Menu::Settings)),
+        (update_global_volume_label, update_se_volume_label).run_if(in_state(Menu::Settings)),
     );
 }
 
@@ -53,6 +53,14 @@ fn settings_grid() -> impl Bundle {
                 }
             ),
             global_volume_widget(),
+            (
+                widget::label("Sound Effects Volume"),
+                Node {
+                    justify_self: JustifySelf::End,
+                    ..default()
+                }
+            ),
+            se_volume_widget(),
         ],
     )
 }
@@ -76,6 +84,29 @@ fn global_volume_widget() -> impl Bundle {
                 children![(widget::label(""), GlobalVolumeLabel)],
             ),
             widget::button_small("+", raise_global_volume),
+        ],
+    )
+}
+
+fn se_volume_widget() -> impl Bundle {
+    (
+        Name::new("SE Volume Widget"),
+        Node {
+            justify_self: JustifySelf::Start,
+            ..default()
+        },
+        children![
+            widget::button_small("-", lower_se_volume),
+            (
+                Name::new("Current SE Volume"),
+                Node {
+                    padding: UiRect::horizontal(Px(10.0)),
+                    justify_content: JustifyContent::Center,
+                    ..default()
+                },
+                children![(widget::label(""), SEVolumeLabel)],
+            ),
+            widget::button_small("+", raise_se_volume),
         ],
     )
 }
@@ -113,11 +144,23 @@ fn raise_se_volume(_: Trigger<Pointer<Click>>, mut se_volume: ResMut<SEVolume>) 
 #[reflect(Component)]
 struct GlobalVolumeLabel;
 
+#[derive(Component, Reflect, Debug)]
+#[reflect(Component)]
+struct SEVolumeLabel;
+
 fn update_global_volume_label(
     global_volume: Res<GlobalVolume>,
     mut label: Single<&mut Text, With<GlobalVolumeLabel>>,
 ) {
     let percent = 100.0 * global_volume.volume.to_linear();
+    label.0 = format!("{percent:3.0}%");
+}
+
+fn update_se_volume_label(
+    se_volume: Res<SEVolume>,
+    mut label: Single<&mut Text, With<SEVolumeLabel>>,
+) {
+    let percent = 100.0 * se_volume.volume.to_linear();
     label.0 = format!("{percent:3.0}%");
 }
 

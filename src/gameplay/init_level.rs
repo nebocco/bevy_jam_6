@@ -16,7 +16,7 @@ use crate::{
     audio::music,
     gameplay::{
         GamePhase, GridCoord, Item,
-        edit::{CreateObject, LevelUIBase, SelectedItem, fire},
+        edit::{CreateObject, SelectedItem, fire},
     },
     screens::Screen,
 };
@@ -127,6 +127,13 @@ pub struct LevelLayout {
     pub board_size: (u8, u8),
     pub objects: HashMap<GridCoord, Item>,
     pub fire_coord: GridCoord,
+    pub meta: LevelMetaData,
+}
+
+#[derive(Debug, Clone, Reflect, Serialize, Deserialize)]
+struct LevelMetaData {
+    pub name: Option<String>,
+    pub description: Option<String>,
 }
 
 #[derive(Default)]
@@ -188,7 +195,7 @@ impl FromWorld for LevelAssets {
 
 fn despawn_old_level(
     mut commands: Commands,
-    query: Query<Entity, Or<(With<LevelBase>, With<LevelUIBase>)>>,
+    query: Query<Entity, With<LevelBase>>,
     mut selected_item: ResMut<SelectedItem>,
 ) {
     for entity in query.iter() {
@@ -226,7 +233,7 @@ fn spawn_level(
             )],
         ))
         .with_children(|parent| spawn_grid(parent, bg_assets, item_assets, level_layout))
-        .observe(reset_tint_colors);
+        .observe(reset_tint_colors_on_out);
 }
 
 const CELL_SIZE_BASE: f32 = 32.0;
@@ -418,13 +425,17 @@ fn recolor_cells(
     });
 }
 
-fn reset_tint_colors(
+fn reset_tint_colors_on_out(
     _out: Trigger<Pointer<Out>>,
-    mut tint_query: Query<&mut Sprite, With<GridTileTint>>,
+    tint_query: Query<&mut Sprite, With<GridTileTint>>,
 ) {
-    for mut sprite in &mut tint_query {
+    reset_tint_colors(tint_query);
+}
+
+pub fn reset_tint_colors(mut tint_query: Query<&mut Sprite, With<GridTileTint>>) {
+    tint_query.iter_mut().for_each(|mut sprite| {
         sprite.color = CELL_COLOR_NORMAL;
-    }
+    });
 }
 
 const CELL_COLOR_NORMAL: Color = Color::NONE;
