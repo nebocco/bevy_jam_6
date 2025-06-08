@@ -24,34 +24,41 @@ fn spawn_credits_menu(mut commands: Commands, ui_assets: Res<UiAssets>) {
         StateScoped(Menu::Credits),
         children![
             widget::header("Created by", Handle::clone(&ui_assets.font)),
-            created_by(),
+            created_by(&ui_assets),
             widget::header("Assets", Handle::clone(&ui_assets.font)),
-            assets(),
+            assets(&ui_assets),
             widget::text_button("Back", &ui_assets, go_back_on_click),
         ],
     ));
 }
 
-fn created_by() -> impl Bundle {
-    grid(vec![
-        ["Joe Shmoe", "Implemented alligator wrestling AI"],
-        ["Jane Doe", "Made the music for the alien invasion"],
-    ])
-}
-
-fn assets() -> impl Bundle {
-    grid(vec![
-        ["Ducky sprite", "CC0 by Caz Creates Games"],
-        ["Button SFX", "CC0 by Jaszunio15"],
-        ["Music", "CC BY 3.0 by Kevin MacLeod"],
-        [
-            "Bevy logo",
-            "All rights reserved by the Bevy Foundation, permission granted for splash screen use when unmodified",
+fn created_by(ui_assets: &UiAssets) -> impl Bundle {
+    grid(
+        vec![
+            ["Joe Shmoe", "Implemented alligator wrestling AI"],
+            ["Jane Doe", "Made the music for the alien invasion"],
         ],
-    ])
+        ui_assets,
+    )
 }
 
-fn grid(content: Vec<[&'static str; 2]>) -> impl Bundle {
+fn assets(ui_assets: &UiAssets) -> impl Bundle {
+    grid(
+        vec![
+            ["Ducky sprite", "CC0 by Caz Creates Games"],
+            ["Button SFX", "CC0 by Jaszunio15"],
+            ["Music", "CC BY 3.0 by Kevin MacLeod"],
+            [
+                "Bevy logo",
+                "All rights reserved by the Bevy Foundation, permission granted for splash screen use when unmodified",
+            ],
+        ],
+        ui_assets,
+    )
+}
+
+fn grid(content: Vec<[&'static str; 2]>, ui_assets: &UiAssets) -> impl Bundle {
+    let font_handle = Handle::clone(&ui_assets.font);
     (
         Name::new("Grid"),
         Node {
@@ -62,9 +69,9 @@ fn grid(content: Vec<[&'static str; 2]>) -> impl Bundle {
             ..default()
         },
         Children::spawn(SpawnIter(content.into_iter().flatten().enumerate().map(
-            |(i, text)| {
+            move |(i, text)| {
                 (
-                    widget::label(text),
+                    widget::label(text, Some(Handle::clone(&font_handle))),
                     Node {
                         justify_self: if i % 2 == 0 {
                             JustifySelf::End

@@ -79,13 +79,15 @@ fn spawn_level_select_screen(
         GlobalZIndex(0),
         children![
             widget::header("Select Level", Handle::clone(&ui_assets.font)),
-            stage_select_button_grid(ui_assets, &cleared_levels, &level_assets)
+            stage_select_button_grid(&ui_assets, &cleared_levels, &level_assets)
         ],
     ));
 
-    // TODO: REMOVE !!!
-    if cleared_levels.0.len() == level_assets.levels.len() || cleared_levels.0.len() < 3 {
-        entity.with_child(widget::footer("All Levels Cleared!"));
+    if cleared_levels.0.len() == level_assets.levels.len() {
+        entity.with_child(widget::header(
+            "All Levels Cleared!",
+            Handle::clone(&ui_assets.font),
+        ));
     }
 }
 
@@ -102,7 +104,7 @@ pub struct LevelStatus {
 }
 
 fn stage_select_button_grid(
-    ui_assets: Res<UiAssets>,
+    ui_assets: &UiAssets,
     cleared_levels: &ClearedLevels,
     level_assets: &LevelAssets,
 ) -> impl Bundle {

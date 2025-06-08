@@ -52,7 +52,7 @@ fn settings_grid(ui_assets: &UiAssets) -> impl Bundle {
         },
         children![
             (
-                widget::label("Music"),
+                widget::label("Music", Some(Handle::clone(&ui_assets.font))),
                 Node {
                     justify_self: JustifySelf::End,
                     ..default()
@@ -60,7 +60,7 @@ fn settings_grid(ui_assets: &UiAssets) -> impl Bundle {
             ),
             music_volume_widget(ui_assets),
             (
-                widget::label("Sound Effects"),
+                widget::label("Sound Effects", Some(Handle::clone(&ui_assets.font))),
                 Node {
                     justify_self: JustifySelf::End,
                     ..default()
@@ -87,7 +87,10 @@ fn music_volume_widget(ui_assets: &UiAssets) -> impl Bundle {
                     justify_content: JustifyContent::Center,
                     ..default()
                 },
-                children![(widget::label(""), MusicVolumeLabel)],
+                children![(
+                    widget::label("", Some(Handle::clone(&ui_assets.font))),
+                    MusicVolumeLabel
+                )],
             ),
             widget::button_small("+", ui_assets, raise_music_volume),
         ],
@@ -110,7 +113,10 @@ fn se_volume_widget(ui_assets: &UiAssets) -> impl Bundle {
                     justify_content: JustifyContent::Center,
                     ..default()
                 },
-                children![(widget::label(""), SEVolumeLabel)],
+                children![(
+                    widget::label("", Some(Handle::clone(&ui_assets.font))),
+                    SEVolumeLabel
+                )],
             ),
             widget::button_small("+", ui_assets, raise_se_volume),
         ],

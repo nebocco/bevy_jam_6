@@ -159,7 +159,7 @@ struct FadeOut;
 
 fn fade_in(
     mut commands: Commands,
-    mut audio_sink: Query<(&mut AudioSink, Entity), With<FadeIn>>,
+    mut audio_sink: Query<(&mut AudioSink, Entity), (With<FadeIn>, Without<FadeOut>)>,
     music_volume: Res<MusicVolume>,
     time: Res<Time>,
 ) {
@@ -228,7 +228,7 @@ fn spawn_music(
 
 fn apply_volume_setting(
     music_volume: Res<MusicVolume>,
-    audio_query: Query<&mut AudioSink, With<Music>>,
+    audio_query: Query<&mut AudioSink, (With<Music>, Without<FadeOut>)>,
 ) {
     for mut sink in audio_query {
         sink.set_volume(music_volume.volume);

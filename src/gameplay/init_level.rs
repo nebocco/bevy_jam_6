@@ -298,7 +298,11 @@ fn spawn_level_ui_components(
             StateScoped(Screen::Gameplay),
             children![
                 // stage_clear
-                mission_line("Clear the stage", is_cleared),
+                mission_line(
+                    "Clear the stage",
+                    is_cleared,
+                    Handle::clone(&ui_assets.font)
+                ),
                 // minimum_bombs
                 mission_line(
                     &format!(
@@ -310,7 +314,8 @@ fn spawn_level_ui_components(
                         }
                     ),
                     game_result.map_or(false, |result| result.used_bomb_count
-                        <= level_layout.meta.min_bombs)
+                        <= level_layout.meta.min_bombs),
+                    Handle::clone(&ui_assets.font)
                 ),
                 // minimum_affected_cells
                 mission_line(
@@ -323,14 +328,15 @@ fn spawn_level_ui_components(
                         }
                     ),
                     game_result.map_or(false, |result| result.affected_cell_count
-                        <= level_layout.meta.min_affected_cells)
+                        <= level_layout.meta.min_affected_cells),
+                    Handle::clone(&ui_assets.font)
                 ),
             ],
         ));
     });
 }
 
-fn mission_line(text: &str, star_is_lit: bool) -> impl Bundle {
+fn mission_line(text: &str, star_is_lit: bool, font: Handle<Font>) -> impl Bundle {
     let _star_color = if star_is_lit {
         palettes::css::GOLD
     } else {
@@ -347,7 +353,7 @@ fn mission_line(text: &str, star_is_lit: bool) -> impl Bundle {
         Pickable::IGNORE,
         children![
             // widget::icon("star", star_color, 16.0),
-            widget::text(text),
+            widget::text(text, font),
         ],
     )
 }
