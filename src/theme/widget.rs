@@ -142,11 +142,12 @@ where
     )
 }
 
-pub fn level_button(index: usize, ui_assets: &UiAssets, level_status: LevelStatus) -> impl Bundle {
+pub fn level_button(index: usize, ui_assets: &UiAssets, level_status: &LevelStatus) -> impl Bundle {
     let text = index.to_string();
     let texture_handle = Handle::clone(&ui_assets.ui_texture);
     let layout = Handle::clone(&ui_assets.texture_atlas_layout);
     let font_handle = Handle::clone(&ui_assets.font);
+    let level_status = level_status.clone();
     (
         Name::new("Button"),
         Node::default(),
@@ -155,16 +156,17 @@ pub fn level_button(index: usize, ui_assets: &UiAssets, level_status: LevelStatu
                 Name::new("Button Inner"),
                 Button,
                 Node {
-                    width: Px(96.0),
-                    height: Px(96.0),
+                    width: Px(108.0),
+                    height: Px(108.0),
                     align_items: AlignItems::Center,
                     justify_content: JustifyContent::Center,
                     ..default()
                 },
+                Transform::default(),
                 ImageNode::from_atlas_image(
-                    texture_handle,
+                    Handle::clone(&texture_handle),
                     TextureAtlas {
-                        layout,
+                        layout: Handle::clone(&layout),
                         index: if level_status.is_cleared { 0 } else { 1 },
                     },
                 )
@@ -179,19 +181,95 @@ pub fn level_button(index: usize, ui_assets: &UiAssets, level_status: LevelStatu
                 } else {
                     Color::Srgba(palettes::css::WHITE)
                 }),
-                children![(
-                    Name::new("Button Text"),
-                    Text(text),
-                    // TextFont::from_font_size(40.0),
-                    TextFont::from_font(font_handle).with_font_size(48.0),
-                    TextColor(if level_status.is_locked {
-                        BUTTON_TEXT_DISABLED
-                    } else {
-                        BUTTON_TEXT
-                    }),
-                    // Don't bubble picking events from the text up to the button.
-                    Pickable::IGNORE,
-                )],
+                children![
+                    (
+                        Name::new("Button Text"),
+                        Text(text),
+                        // TextFont::from_font_size(40.0),
+                        TextFont::from_font(font_handle).with_font_size(48.0),
+                        TextColor(if level_status.is_locked {
+                            BUTTON_TEXT_DISABLED
+                        } else {
+                            BUTTON_TEXT
+                        }),
+                        // Don't bubble picking events from the text up to the button.
+                        Pickable::IGNORE,
+                    ),
+                    (
+                        Name::new("Stars"),
+                        Node {
+                            position_type: PositionType::Absolute,
+                            display: Display::Flex,
+                            flex_direction: FlexDirection::Row,
+                            align_items: AlignItems::Center,
+                            justify_content: JustifyContent::Center,
+                            width: Percent(100.0),
+                            bottom: Px(8.0),
+                            column_gap: Px(-6.0),
+                            ..default()
+                        },
+                        Transform::default(),
+                        children![
+                            (
+                                Name::new("Star 1"),
+                                ImageNode::from_atlas_image(
+                                    Handle::clone(&texture_handle),
+                                    TextureAtlas {
+                                        layout: Handle::clone(&layout),
+                                        index: if level_status
+                                            .best_result
+                                            .as_ref()
+                                            .map_or(false, |result| result.mission_status[0])
+                                        {
+                                            7
+                                        } else {
+                                            6
+                                        },
+                                    },
+                                ),
+                                Transform::from_xyz(0.0, 0.0, 0.1),
+                            ),
+                            (
+                                Name::new("Star 2"),
+                                ImageNode::from_atlas_image(
+                                    Handle::clone(&texture_handle),
+                                    TextureAtlas {
+                                        layout: Handle::clone(&layout),
+                                        index: if level_status
+                                            .best_result
+                                            .as_ref()
+                                            .map_or(false, |result| result.mission_status[1])
+                                        {
+                                            7
+                                        } else {
+                                            6
+                                        },
+                                    },
+                                ),
+                                Transform::from_xyz(0.0, 0.0, 0.1),
+                            ),
+                            (
+                                Name::new("Star 3"),
+                                ImageNode::from_atlas_image(
+                                    Handle::clone(&texture_handle),
+                                    TextureAtlas {
+                                        layout: Handle::clone(&layout),
+                                        index: if level_status
+                                            .best_result
+                                            .as_ref()
+                                            .map_or(false, |result| result.mission_status[2])
+                                        {
+                                            7
+                                        } else {
+                                            6
+                                        },
+                                    },
+                                ),
+                                Transform::from_xyz(0.0, 0.0, 0.1),
+                            ),
+                        ]
+                    )
+                ],
             ));
 
             if !level_status.is_locked {

@@ -34,6 +34,7 @@ pub struct GameResult {
     pub is_cleared: bool,
     pub used_bomb_count: u8,
     pub affected_cell_count: u8,
+    pub mission_status: [bool; 3], // clear, min_bombs, min_affected_cells
 }
 
 fn compute_game_result(
@@ -42,11 +43,13 @@ fn compute_game_result(
     query: Query<(&Item, &ItemState, &GridCoord)>,
     mut result: ResMut<GameResult>,
 ) {
+    // reset to default values
     *result = GameResult {
         level: current_level.level,
         is_cleared: false,
         used_bomb_count: u8::MAX,
         affected_cell_count: u8::MAX,
+        mission_status: [false; 3],
     };
 
     let Some(level_layout) = level_assets.get(&current_level.layout) else {
@@ -130,11 +133,18 @@ fn compute_game_result(
         u8::MAX
     };
 
+    let mission_status = [
+        is_cleared,
+        used_bomb_count <= level_layout.meta.min_bombs,
+        affected_cell_count <= level_layout.meta.min_affected_cells,
+    ];
+
     *result = GameResult {
         level: current_level.level,
         is_cleared,
         used_bomb_count,
         affected_cell_count,
+        mission_status,
     };
 }
 
@@ -149,16 +159,33 @@ fn record_cleated_levels(
     );
 
     if game_result.is_cleared {
-        cleared_levels
+        let current_best = cleared_levels
             .0
-            .insert(current_level.level, game_result.clone());
-        info!(
-            "Level {} cleared! Used {} bombs.",
-            current_level.level, game_result.used_bomb_count
-        );
-    } else {
-        info!("Level {} failed.", current_level.level);
-    };
+            .entry(current_level.level)
+            .or_insert_with(|| GameResult {
+                level: current_level.level,
+                is_cleared: false,
+                used_bomb_count: u8::MAX,
+                affected_cell_count: u8::MAX,
+                mission_status: [false; 3],
+            });
+
+        current_best.is_cleared |= game_result.is_cleared;
+        current_best.used_bomb_count = current_best
+            .used_bomb_count
+            .min(game_result.used_bomb_count);
+        current_best.affected_cell_count = current_best
+            .affected_cell_count
+            .min(game_result.affected_cell_count);
+
+        current_best
+            .mission_status
+            .iter_mut()
+            .enumerate()
+            .for_each(|(i, status)| {
+                *status |= game_result.mission_status[i];
+            });
+    }
 }
 
 fn init_result_state(

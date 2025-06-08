@@ -3,7 +3,7 @@ use bevy::{ecs::spawn::SpawnWith, input::common_conditions::input_just_pressed, 
 use crate::{
     Pause,
     audio::{MusicAssets, SpawnMusic},
-    gameplay::{ClearedLevels, CurrentLevel, GamePhase, LevelAssets, move_to_level},
+    gameplay::{ClearedLevels, CurrentLevel, GamePhase, GameResult, LevelAssets, move_to_level},
     menus::Menu,
     screens::Screen,
     theme::{UiAssets, widget},
@@ -97,10 +97,11 @@ fn spawn_music(mut commands: Commands, music_assets: Res<MusicAssets>) {
     )));
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct LevelStatus {
     pub is_cleared: bool,
     pub is_locked: bool,
+    pub best_result: Option<GameResult>,
 }
 
 fn stage_select_button_grid(
@@ -117,6 +118,7 @@ fn stage_select_button_grid(
             is_cleared: cleared_levels.0.contains_key(&index),
             // is_locked: (0..index).any(|i| !cleared_levels.0.contains_key(&i)) ,
             is_locked: false, // TODO: REMOVE !!!
+            best_result: cleared_levels.0.get(&index).cloned(),
         })
         .collect::<Vec<_>>();
 
@@ -127,12 +129,14 @@ fn stage_select_button_grid(
             height: Val::Percent(70.0),
             grid_template_columns: vec![GridTrack::auto(); 4],
             grid_template_rows: vec![GridTrack::auto(); 4],
+            justify_content: JustifyContent::SpaceBetween,
+            align_items: AlignItems::Stretch,
             ..default()
         },
         Children::spawn(SpawnWith(move |parent: &mut ChildSpawner| {
             for (index, status) in level_status_list.into_iter().enumerate() {
                 let mut entity_bundle =
-                    parent.spawn(widget::level_button(index, &ui_assets, status));
+                    parent.spawn(widget::level_button(index, &ui_assets, &status));
                 if !status.is_locked {
                     entity_bundle.observe(
                         move |_out: Trigger<Pointer<Click>>,
