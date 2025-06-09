@@ -25,7 +25,7 @@ fn spawn_pause_menu(mut commands: Commands, ui_assets: Res<UiAssets>) {
             widget::header("Game paused", Handle::clone(&ui_assets.font)),
             widget::text_button("Continue", &ui_assets, close_menu),
             widget::text_button("Settings", &ui_assets, open_settings_menu),
-            widget::text_button("Quit to title", &ui_assets, quit_to_title),
+            widget::text_button("Select Level", &ui_assets, back_to_level_select),
         ],
     ));
 }
@@ -38,8 +38,8 @@ fn close_menu(_: Trigger<Pointer<Click>>, mut next_menu: ResMut<NextState<Menu>>
     next_menu.set(Menu::None);
 }
 
-fn quit_to_title(_: Trigger<Pointer<Click>>, mut next_screen: ResMut<NextState<Screen>>) {
-    next_screen.set(Screen::Title);
+fn back_to_level_select(_: Trigger<Pointer<Click>>, mut next_screen: ResMut<NextState<Screen>>) {
+    next_screen.set(Screen::LevelSelect);
 }
 
 fn go_back(mut next_menu: ResMut<NextState<Menu>>) {
