@@ -3,7 +3,7 @@
 A puzzle game where you create chain reactions with bombs to clear levels.
 Made for the Bevy Game Jam 6 with the theme "Chain Reaction".
 
-https://nebocco.itch.io/bombombo
+**Play now on [itch.io](https://nebocco.itch.io/bombombo)**
 
 ## How to Play
 Place bombs strategically and ignite them to create chain reactions.
