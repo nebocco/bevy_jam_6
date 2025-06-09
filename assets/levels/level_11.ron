@@ -3,6 +3,7 @@
     objects: {
         (x:0, y:3): BombSmall,
         (x:0, y:0): Rock,
+        (x:0, y:6): Jewel,
         (x:1, y:0): Jewel,
         (x:1, y:6): Rock,
         (x:2, y:0): Rock,
@@ -19,7 +20,7 @@
         (x:7, y:6): Rock,
 
     },
-    fire_coord: (x:0, y:1),
+    fire_coord: (x:0, y:3),
     meta: (
         name: "Runway",
         min_bombs: 9,
