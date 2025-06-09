@@ -216,6 +216,7 @@ fn init_result_state(
                 Handle::clone(&ui_assets.font)
             ),
             widget::text_button("Select Level", &ui_assets, go_level_select),
+            widget::text_button("Retry", &ui_assets, retry_level),
             widget::text_button("Next Level", &ui_assets, next_level),
         ]);
 
