@@ -266,7 +266,6 @@ pub fn move_to_level(
     mut next_phase: ResMut<NextState<GamePhase>>,
     mut next_screen: ResMut<NextState<Screen>>,
 ) {
-    info!("Moving to Level: {}", next_level);
     if let Some(level_handle) = level_assets.levels.get(next_level) {
         current_level.level = next_level;
         current_level.layout = Handle::clone(level_handle);
