@@ -1,4 +1,5 @@
 use bevy::{ecs::spawn::SpawnWith, input::common_conditions::input_just_pressed, prelude::*};
+use bevy_persistent::Persistent;
 
 use crate::{
     Pause,
@@ -70,7 +71,7 @@ fn close_menu(mut next_menu: ResMut<NextState<Menu>>) {
 fn spawn_level_select_screen(
     mut commands: Commands,
     ui_assets: Res<UiAssets>,
-    cleared_levels: Res<ClearedLevels>,
+    cleared_levels: Res<Persistent<ClearedLevels>>,
     level_assets: Res<LevelAssets>,
 ) {
     let mut entity = commands.spawn((

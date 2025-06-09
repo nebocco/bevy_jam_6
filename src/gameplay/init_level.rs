@@ -9,6 +9,7 @@ use bevy::{
     image::{ImageLoaderSettings, ImageSampler},
     prelude::*,
 };
+use bevy_persistent::Persistent;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -248,7 +249,7 @@ fn spawn_level_ui_components(
     mut commands: Commands,
     ui_assets: Res<UiAssets>,
     level_layouts: Res<Assets<LevelLayout>>,
-    cleared_levels: Res<ClearedLevels>,
+    cleared_levels: Res<Persistent<ClearedLevels>>,
     current_level: Res<CurrentLevel>,
 ) {
     let level_layout = level_layouts

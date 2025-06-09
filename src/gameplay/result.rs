@@ -1,6 +1,7 @@
-use std::collections::{HashMap, HashSet};
-
-use bevy::prelude::*;
+use std::{
+    collections::{HashMap, HashSet},
+    path::Path,
+};
 
 use crate::{
     audio::{SEVolume, SoundEffectAssets, sound_effect, stop_music},
@@ -8,15 +9,19 @@ use crate::{
     screens::Screen,
     theme::{UiAssets, widget},
 };
+use bevy::prelude::*;
+use bevy_persistent::prelude::*;
+use serde::{Deserialize, Serialize};
 
 pub(super) fn plugin(app: &mut App) {
-    app.init_resource::<GameResult>()
-        .init_resource::<ClearedLevels>();
+    app.init_resource::<GameResult>();
+
+    app.add_systems(Startup, insert_persistent_resources);
     app.add_systems(
         OnEnter(GamePhase::Result),
         (
             compute_game_result,
-            record_cleated_levels,
+            record_cleared_levels,
             init_result_state,
             stop_music,
         )
@@ -24,10 +29,10 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-#[derive(Resource, Debug, Clone, PartialEq, Default)]
+#[derive(Resource, Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct ClearedLevels(pub HashMap<usize, GameResult>);
 
-#[derive(Resource, Reflect, Debug, Default, Clone, PartialEq)]
+#[derive(Resource, Reflect, Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 #[reflect(Resource)]
 pub struct GameResult {
     pub level: usize,
@@ -148,10 +153,10 @@ fn compute_game_result(
     };
 }
 
-fn record_cleated_levels(
+fn record_cleared_levels(
     current_level: Res<CurrentLevel>,
     game_result: Res<GameResult>,
-    mut cleared_levels: ResMut<ClearedLevels>,
+    mut cleared_levels: ResMut<Persistent<ClearedLevels>>,
 ) {
     assert_eq!(
         current_level.level, game_result.level,
@@ -159,32 +164,37 @@ fn record_cleated_levels(
     );
 
     if game_result.is_cleared {
-        let current_best = cleared_levels
-            .0
-            .entry(current_level.level)
-            .or_insert_with(|| GameResult {
-                level: current_level.level,
-                is_cleared: false,
-                used_bomb_count: u8::MAX,
-                affected_cell_count: u8::MAX,
-                mission_status: [false; 3],
-            });
+        cleared_levels
+            .update(|cleared_levels| {
+                let current_best =
+                    cleared_levels
+                        .0
+                        .entry(current_level.level)
+                        .or_insert_with(|| GameResult {
+                            level: current_level.level,
+                            is_cleared: false,
+                            used_bomb_count: u8::MAX,
+                            affected_cell_count: u8::MAX,
+                            mission_status: [false; 3],
+                        });
 
-        current_best.is_cleared |= game_result.is_cleared;
-        current_best.used_bomb_count = current_best
-            .used_bomb_count
-            .min(game_result.used_bomb_count);
-        current_best.affected_cell_count = current_best
-            .affected_cell_count
-            .min(game_result.affected_cell_count);
+                current_best.is_cleared |= game_result.is_cleared;
+                current_best.used_bomb_count = current_best
+                    .used_bomb_count
+                    .min(game_result.used_bomb_count);
+                current_best.affected_cell_count = current_best
+                    .affected_cell_count
+                    .min(game_result.affected_cell_count);
 
-        current_best
-            .mission_status
-            .iter_mut()
-            .enumerate()
-            .for_each(|(i, status)| {
-                *status |= game_result.mission_status[i];
-            });
+                current_best
+                    .mission_status
+                    .iter_mut()
+                    .enumerate()
+                    .for_each(|(i, status)| {
+                        *status |= game_result.mission_status[i];
+                    });
+            })
+            .ok();
     }
 }
 
@@ -276,4 +286,21 @@ pub fn move_to_level(
         warn!("Level {} does not exist", next_level);
         next_screen.set(Screen::LevelSelect);
     }
+}
+
+fn insert_persistent_resources(mut commands: Commands) {
+    let data_dir = dirs::data_dir()
+        .map(|native_state_dir| native_state_dir.join("bevy-persistent"))
+        .unwrap_or(Path::new("local").join("data"))
+        .join("bombombo");
+
+    commands.insert_resource(
+        Persistent::<ClearedLevels>::builder()
+            .name("cleared levels")
+            .format(StorageFormat::Ron)
+            .path(data_dir.join("cleared_levels.ron"))
+            .default(ClearedLevels::default())
+            .build()
+            .expect("failed to initialize cleared levels persistent resource"),
+    )
 }
