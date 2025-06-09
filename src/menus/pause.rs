@@ -29,7 +29,7 @@ fn spawn_pause_menu(
             StateScoped(Menu::Pause),
             children![
                 widget::header("Game paused", Handle::clone(&ui_assets.font)),
-                widget::text_button("Resume", &ui_assets, close_menu),
+                widget::text_button("Continue", &ui_assets, close_menu),
                 widget::text_button("Settings", &ui_assets, open_settings_menu),
                 widget::text_button("Select Level", &ui_assets, back_to_level_select),
             ],
@@ -42,7 +42,7 @@ fn spawn_pause_menu(
             StateScoped(Menu::Pause),
             children![
                 widget::header("Game paused", Handle::clone(&ui_assets.font)),
-                widget::text_button("Resume", &ui_assets, close_menu),
+                widget::text_button("Continue", &ui_assets, close_menu),
                 widget::text_button("Settings", &ui_assets, open_settings_menu),
                 widget::text_button("Quit to title", &ui_assets, quit_to_title),
             ],
