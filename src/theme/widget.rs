@@ -175,7 +175,7 @@ where
 }
 
 pub fn level_button(index: usize, ui_assets: &UiAssets, level_status: &LevelStatus) -> impl Bundle {
-    let text = index.to_string();
+    let text = (index + 1).to_string();
     let texture_handle = Handle::clone(&ui_assets.ui_texture);
     let layout = Handle::clone(&ui_assets.texture_atlas_layout);
     let font_handle = Handle::clone(&ui_assets.font);
