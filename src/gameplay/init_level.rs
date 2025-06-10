@@ -512,11 +512,7 @@ fn spawn_grid_cell(
                 let Some(item) = selected_item.0 else {
                     return;
                 };
-                commands.trigger(CreateObject {
-                    parent_grid: entity,
-                    coord,
-                    item,
-                });
+                commands.trigger(CreateObject::new(entity, coord, item).with_sound());
             },
         );
     }

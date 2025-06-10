@@ -147,6 +147,28 @@ pub struct CreateObject {
     pub parent_grid: Entity,
     pub coord: GridCoord,
     pub item: Item,
+    with_sound: bool,
+}
+
+impl CreateObject {
+    pub fn new(parent_grid: Entity, coord: GridCoord, item: Item) -> Self {
+        Self {
+            parent_grid,
+            coord,
+            item,
+            with_sound: true,
+        }
+    }
+
+    pub fn without_sound(mut self) -> Self {
+        self.with_sound = false;
+        self
+    }
+
+    pub fn with_sound(mut self) -> Self {
+        self.with_sound = true;
+        self
+    }
 }
 
 #[allow(dead_code)]
@@ -212,6 +234,11 @@ fn create_object(
     }
 
     if event.item == Item::Eraser {
+        if event.with_sound {
+            if let Some(se_assets) = se_assets {
+                commands.spawn(sound_effect(se_assets.break_1.clone(), &se_volume));
+            }
+        }
         return;
     }
 
@@ -235,8 +262,10 @@ fn create_object(
 
     commands.entity(event.parent_grid).add_child(entity);
 
-    if let Some(se_assets) = se_assets {
-        commands.spawn(sound_effect(se_assets.break_2.clone(), &se_volume));
+    if event.with_sound {
+        if let Some(se_assets) = se_assets {
+            commands.spawn(sound_effect(se_assets.break_2.clone(), &se_volume));
+        }
     }
 }
 
@@ -360,11 +389,7 @@ fn apply_current_placement(
             .iter()
             .find(|&(&grid_coord, _)| grid_coord == coord)
         {
-            commands.trigger(CreateObject {
-                parent_grid,
-                coord,
-                item,
-            });
+            commands.trigger(CreateObject::new(parent_grid, coord, item).without_sound());
         } else {
             warn!("No grid tile found for coord: {:?}", coord);
             continue;
