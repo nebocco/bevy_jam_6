@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     asset_tracking::LoadResource,
     gameplay::{
-        ClearedLevels, GamePhase, GridCoord, Item,
+        ClearedLevels, GamePhase, GameResult, GridCoord, Item,
         edit::{CreateObject, SelectedItem, fire},
     },
     screens::Screen,
@@ -293,72 +293,85 @@ fn spawn_level_ui_components(
         )],
     ));
 
-    let is_cleared = game_result.is_some_and(|result| result.is_cleared);
-
     // missions section
     ui_base.with_children(|parent| {
-        parent.spawn((
-            Name::new("Missions Section"),
-            Node {
-                display: Display::Flex,
-                flex_direction: FlexDirection::Column,
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::FlexStart,
-                row_gap: Val::Px(8.0),
-                ..Default::default()
-            },
-            Pickable::IGNORE,
-            StateScoped(Screen::Gameplay),
-            children![
-                // stage_clear
-                mission_line(
-                    "Clear the stage",
-                    is_cleared,
-                    Handle::clone(&ui_assets.font),
-                    Handle::clone(&ui_assets.ui_texture),
-                    Handle::clone(&ui_assets.texture_atlas_layout),
-                ),
-                // minimum_bombs
-                mission_line(
-                    &format!(
-                        "Use at most {} bombs",
-                        if is_cleared {
-                            level_layout.meta.min_bombs.to_string()
-                        } else {
-                            "???".to_string()
-                        }
-                    ),
-                    game_result.is_some_and(|result| {
-                        result.used_bomb_count <= level_layout.meta.min_bombs
-                    }),
-                    Handle::clone(&ui_assets.font),
-                    Handle::clone(&ui_assets.ui_texture),
-                    Handle::clone(&ui_assets.texture_atlas_layout),
-                ),
-                // minimum_affected_cells
-                mission_line(
-                    &format!(
-                        "Affect at most {} cells",
-                        if is_cleared {
-                            level_layout.meta.min_affected_cells.to_string()
-                        } else {
-                            "???".to_string()
-                        }
-                    ),
-                    game_result.is_some_and(|result| {
-                        result.affected_cell_count <= level_layout.meta.min_affected_cells
-                    }),
-                    Handle::clone(&ui_assets.font),
-                    Handle::clone(&ui_assets.ui_texture),
-                    Handle::clone(&ui_assets.texture_atlas_layout),
-                ),
-            ],
-        ));
+        parent.spawn(missions_section(&ui_assets, level_layout, game_result));
     });
 }
 
+#[derive(Component, Reflect, Debug)]
+#[reflect(Component)]
+pub struct MissionsSection;
+
+pub fn missions_section(
+    ui_assets: &UiAssets,
+    level_layout: &LevelLayout,
+    game_result: Option<&GameResult>,
+) -> impl Bundle {
+    let is_cleared = game_result.is_some_and(|result| result.is_cleared);
+
+    (
+        Name::new("Missions Section"),
+        MissionsSection,
+        Node {
+            display: Display::Flex,
+            flex_direction: FlexDirection::Column,
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::FlexStart,
+            row_gap: Val::Px(8.0),
+            ..Default::default()
+        },
+        Pickable::IGNORE,
+        StateScoped(Screen::Gameplay),
+        children![
+            // stage_clear
+            mission_line(
+                "Clear the stage",
+                is_cleared,
+                Handle::clone(&ui_assets.font),
+                Handle::clone(&ui_assets.ui_texture),
+                Handle::clone(&ui_assets.texture_atlas_layout),
+            ),
+            // minimum_bombs
+            mission_line(
+                format!(
+                    "Use at most {} bombs",
+                    if is_cleared {
+                        level_layout.meta.min_bombs.to_string()
+                    } else {
+                        "???".to_string()
+                    }
+                ),
+                game_result.is_some_and(|result| {
+                    result.used_bomb_count <= level_layout.meta.min_bombs
+                }),
+                Handle::clone(&ui_assets.font),
+                Handle::clone(&ui_assets.ui_texture),
+                Handle::clone(&ui_assets.texture_atlas_layout),
+            ),
+            // minimum_affected_cells
+            mission_line(
+                format!(
+                    "Affect at most {} cells",
+                    if is_cleared {
+                        level_layout.meta.min_affected_cells.to_string()
+                    } else {
+                        "???".to_string()
+                    }
+                ),
+                game_result.is_some_and(|result| {
+                    result.affected_cell_count <= level_layout.meta.min_affected_cells
+                }),
+                Handle::clone(&ui_assets.font),
+                Handle::clone(&ui_assets.ui_texture),
+                Handle::clone(&ui_assets.texture_atlas_layout),
+            ),
+        ],
+    )
+}
+
 fn mission_line(
-    text: &str,
+    text: impl Into<String>,
     star_is_lit: bool,
     font: Handle<Font>,
     texture_handle: Handle<Image>,

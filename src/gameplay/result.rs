@@ -5,7 +5,10 @@ use std::{
 
 use crate::{
     audio::{SEVolume, SoundEffectAssets, sound_effect, stop_music},
-    gameplay::{CurrentLevel, GamePhase, GridCoord, Item, ItemState, LevelAssets, LevelLayout},
+    gameplay::{
+        CurrentLevel, GamePhase, GridCoord, Item, ItemState, LevelAssets, LevelLayout,
+        init_level::{MissionsSection, missions_section},
+    },
     screens::Screen,
     theme::{UiAssets, widget},
 };
@@ -23,6 +26,7 @@ pub(super) fn plugin(app: &mut App) {
             compute_game_result,
             record_cleared_levels,
             init_result_state,
+            update_mission_status,
             stop_music,
         )
             .chain(),
@@ -243,6 +247,30 @@ fn init_result_state(
         if let Some(se_assets) = se_assets {
             commands.spawn(sound_effect(se_assets.failed.clone(), &se_volume));
         }
+    }
+}
+
+fn update_mission_status(
+    mut commands: Commands,
+    game_result: Res<GameResult>,
+    ui_assets: Res<UiAssets>,
+    current_level: Res<CurrentLevel>,
+    level_layouts: Res<Assets<LevelLayout>>,
+    missions_section_query: Query<(Entity, &ChildOf), With<MissionsSection>>,
+) {
+    let Some(level_layout) = level_layouts.get(&current_level.layout) else {
+        warn!("Current level layout not found in assets");
+        return;
+    };
+
+    for (entity, ChildOf(parent)) in missions_section_query.iter() {
+        commands.entity(entity).despawn();
+
+        commands.entity(*parent).with_child(missions_section(
+            &ui_assets,
+            level_layout,
+            Some(&game_result),
+        ));
     }
 }
 
