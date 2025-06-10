@@ -23,13 +23,14 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         OnEnter(GamePhase::Result),
         (
-            compute_game_result,
-            record_cleared_levels,
-            init_result_state,
-            update_mission_status,
+            (
+                compute_game_result,
+                record_cleared_levels,
+                (init_result_state, update_mission_status),
+            )
+                .chain(),
             stop_music,
-        )
-            .chain(),
+        ),
     );
 }
 
@@ -252,7 +253,7 @@ fn init_result_state(
 
 fn update_mission_status(
     mut commands: Commands,
-    game_result: Res<GameResult>,
+    cleared_levels: Res<Persistent<ClearedLevels>>,
     ui_assets: Res<UiAssets>,
     current_level: Res<CurrentLevel>,
     level_layouts: Res<Assets<LevelLayout>>,
@@ -263,13 +264,14 @@ fn update_mission_status(
         return;
     };
 
+    let game_result = cleared_levels.0.get(&current_level.level);
     for (entity, ChildOf(parent)) in missions_section_query.iter() {
         commands.entity(entity).despawn();
 
         commands.entity(*parent).with_child(missions_section(
             &ui_assets,
             level_layout,
-            Some(&game_result),
+            game_result,
         ));
     }
 }
