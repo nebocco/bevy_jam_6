@@ -5,10 +5,10 @@ use bevy::{color::palettes, prelude::*};
 use crate::{
     audio::{SEVolume, SoundEffectAssets, sound_effect},
     gameplay::{
-        GamePhase, GridCoord, Item, ItemState,
+        CurrentLevel, GamePhase, GridCoord, Item, ItemState,
         animation::AffectedTileAnimation,
-        edit::{Fire, SelectedItem, fire},
-        init_level::{GridTile, ItemAssets, reset_tint_colors},
+        edit::{CurrentPlacement, Fire, SelectedItem, fire},
+        init_level::{GridTile, ItemAssets, LevelLayout, reset_tint_colors},
     },
     theme::{
         interaction::InteractionImagePalette,
@@ -22,7 +22,11 @@ pub(super) fn plugin(app: &mut App) {
         .insert_resource(RunningTimer(Timer::from_seconds(1.2, TimerMode::Repeating)));
     app.add_systems(
         OnEnter(GamePhase::Run),
-        (disable_buttons, reset_tint_colors, init_run_state),
+        (
+            disable_buttons,
+            reset_tint_colors,
+            (init_run_state, record_current_placement).chain(),
+        ),
     )
     .add_systems(Update, tick_timer.run_if(in_state(GamePhase::Run)))
     .add_observer(tick_simulation);
@@ -98,6 +102,28 @@ fn disable_buttons(
         image_node.color = Color::WHITE;
         commands.entity(entity).remove::<InteractionImagePalette>();
     }
+}
+
+fn record_current_placement(
+    running_state: Res<RunningState>,
+    current_level: Res<CurrentLevel>,
+    level_assets: Res<Assets<LevelLayout>>,
+    mut current_placement: ResMut<CurrentPlacement>,
+) {
+    let Some(level_layout) = level_assets.get(&current_level.layout) else {
+        warn!("Current level layout not found in assets");
+        return;
+    };
+
+    *current_placement = CurrentPlacement::new(
+        current_level.level,
+        running_state
+            .object_map
+            .iter()
+            .filter(|&(&coord, &(item, _entity))| level_layout.objects.get(&coord) != Some(&item))
+            .map(|(&coord, &(item, _entity))| (coord, item))
+            .collect(),
+    );
 }
 
 fn tick_timer(

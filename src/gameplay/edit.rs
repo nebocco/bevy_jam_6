@@ -4,7 +4,8 @@ use crate::{
     PausableSystems,
     audio::{SEVolume, SoundEffectAssets, sound_effect},
     gameplay::{
-        FireAnimation, GamePhase, GridCoord, Item, ItemAssets, ItemState, init_level::LevelBase,
+        CurrentLevel, FireAnimation, GamePhase, GridCoord, Item, ItemAssets, ItemState,
+        init_level::{GridTile, LevelBase},
     },
     screens::Screen,
     theme::{UiAssets, widget},
@@ -15,16 +16,22 @@ pub(super) fn plugin(app: &mut App) {
 
     // app.register_type::<ItemAssets>();
 
-    app.init_resource::<SelectedItem>();
+    app.init_resource::<SelectedItem>()
+        .init_resource::<CurrentPlacement>();
 
     app.add_observer(create_object);
     // .add_observer(try_create_single_fire);
 
     app.add_systems(
         OnEnter(GamePhase::Edit),
-        (spawn_item_buttons, spawn_controlflow_buttons),
+        (
+            spawn_item_buttons,
+            spawn_controlflow_buttons,
+            init_edit_state,
+        ),
     )
-    .add_systems(OnEnter(GamePhase::Edit), init_edit_state)
+    .add_systems(OnExit(Screen::Gameplay), reset_current_placement)
+    .add_systems(OnEnter(GamePhase::Edit), apply_current_placement)
     .add_systems(
         Update,
         (reset_all_object_placements, run_simulation_with_keyboard)
@@ -193,7 +200,6 @@ fn create_object(
     mut commands: Commands,
     item_assets: Res<ItemAssets>,
     query: Query<(Entity, &Item, &GridCoord)>,
-
     se_assets: Option<Res<SoundEffectAssets>>,
     se_volume: Res<SEVolume>,
 ) {
@@ -324,4 +330,49 @@ fn _try_run_simulation(
     } else {
         next_state.set(GamePhase::Run);
     }
+}
+
+#[derive(Resource, Reflect, Debug, Default)]
+#[reflect(Resource)]
+pub struct CurrentPlacement {
+    level: usize,
+    placements: Vec<(GridCoord, Item)>,
+}
+
+impl CurrentPlacement {
+    pub fn new(level: usize, placements: Vec<(GridCoord, Item)>) -> Self {
+        Self { level, placements }
+    }
+}
+
+fn apply_current_placement(
+    mut commands: Commands,
+    current_placement: Res<CurrentPlacement>,
+    current_level: Res<CurrentLevel>,
+    grid_query: Query<(&GridCoord, Entity), With<GridTile>>,
+) {
+    if current_placement.level != current_level.level {
+        return; // Do not apply if the level has changed
+    }
+
+    for &(coord, item) in &current_placement.placements {
+        if let Some((_, parent_grid)) = grid_query
+            .iter()
+            .find(|&(&grid_coord, _)| grid_coord == coord)
+        {
+            commands.trigger(CreateObject {
+                parent_grid,
+                coord,
+                item,
+            });
+        } else {
+            warn!("No grid tile found for coord: {:?}", coord);
+            continue;
+        }
+    }
+}
+
+fn reset_current_placement(mut current_placement: ResMut<CurrentPlacement>) {
+    current_placement.placements.clear(); // Clear the current placement
+    current_placement.level = usize::MAX; // Reset the level to an invalid state
 }
