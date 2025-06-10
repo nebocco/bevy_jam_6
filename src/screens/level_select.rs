@@ -85,10 +85,21 @@ fn spawn_level_select_screen(
     ));
 
     if cleared_levels.0.len() == level_assets.levels.len() {
-        entity.with_child(widget::header(
-            "All Levels Cleared!",
-            Handle::clone(&ui_assets.font),
-        ));
+        if cleared_levels
+            .0
+            .iter()
+            .all(|(_, result)| result.mission_status.iter().all(|&status| status))
+        {
+            entity.with_child(widget::header(
+                "Congratulations! All Levels Completed!",
+                Handle::clone(&ui_assets.font),
+            ));
+        } else {
+            entity.with_child(widget::header(
+                "All Levels Cleared!",
+                Handle::clone(&ui_assets.font),
+            ));
+        }
     }
 }
 
