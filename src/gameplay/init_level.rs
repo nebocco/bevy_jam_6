@@ -503,16 +503,18 @@ fn spawn_grid_cell(
              coord: Query<&GridCoord>,
              selected_item: Res<SelectedItem>,
              mut commands: Commands| {
-                if out.button != PointerButton::Primary {
-                    return;
-                }
                 let entity = out.target();
                 let &coord = coord.get(entity).unwrap();
 
-                let Some(item) = selected_item.0 else {
-                    return;
-                };
-                commands.trigger(CreateObject::new(entity, coord, item).with_sound());
+                if out.button == PointerButton::Primary {
+                    let Some(item) = selected_item.0 else {
+                        return;
+                    };
+                    commands.trigger(CreateObject::new(entity, coord, item).with_sound());
+                } else if out.button == PointerButton::Secondary {
+                    // If the secondary button is pressed, remove the item at the coordinate
+                    commands.trigger(CreateObject::new(entity, coord, Item::Eraser).with_sound());
+                }
             },
         );
     }
